@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+:root {
+  /* Default: Dark Theme */
+  --color-black: #18181b;
+  --color-white: #f4f4f5;
+  --color-zinc-950: #202124;
+  --color-zinc-905: #26272b;
+  --color-zinc-900: #303137;
+  --color-zinc-850: #40424a;
+  --color-zinc-800: #555864;
+  --color-zinc-700: #828795; /* Increased brightness from #6d717d to improve contrast */
+  --color-zinc-650: #9ca3af; /* Increased brightness from #858a96 to improve contrast */
+  --color-zinc-505: #b7bbc5;
+  --color-zinc-500: #c1c5cf;
+  --color-zinc-400: #d8dbe3;
+  --color-zinc-355: #e3e5ea;
+  --color-zinc-352: #e5e7eb;
+  --color-zinc-350: #e6e8ed;
+  --color-zinc-300: #eceef2;
+  --color-zinc-200: #f2f3f6;
+  --color-zinc-100: #f7f8fa;
+}
+
+:root.light {
+  /* Light Theme Overrides */
+  --color-black: #f1f5f9;
+  --color-white: #0f172a;
+  --color-zinc-950: #ffffff;
+  --color-zinc-905: #f8fafc;
+  --color-zinc-900: #e2e8f0;
+  --color-zinc-850: #cbd5e1;
+  --color-zinc-800: #94a3b8;
+  --color-zinc-700: #334155; /* Darkened from #64748b to improve contrast */
+  --color-zinc-650: #1e293b; /* Darkened from #475569 to improve contrast */
+  --color-zinc-505: #1e293b;
+  --color-zinc-500: #0f172a;
+  --color-zinc-400: #0f172a;
+  --color-zinc-355: #020617;
+  --color-zinc-352: #cbd5e1;
+  --color-zinc-350: #94a3b8;
+  --color-zinc-300: #1e293b;
+  --color-zinc-200: #1e293b;
+  --color-zinc-100: #0f172a;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-black: var(--color-black);
+  --color-white: var(--color-white);
+  --color-zinc-950: var(--color-zinc-950);
+  --color-zinc-905: var(--color-zinc-905);
+  --color-zinc-900: var(--color-zinc-900);
+  --color-zinc-850: var(--color-zinc-850);
+  --color-zinc-800: var(--color-zinc-800);
+  --color-zinc-700: var(--color-zinc-700);
+  --color-zinc-650: var(--color-zinc-650);
+  --color-zinc-505: var(--color-zinc-505);
+  --color-zinc-500: var(--color-zinc-500);
+  --color-zinc-400: var(--color-zinc-400);
+  --color-zinc-355: var(--color-zinc-355);
+  --color-zinc-352: var(--color-zinc-352);
+  --color-zinc-350: var(--color-zinc-350);
+  --color-zinc-300: var(--color-zinc-300);
+  --color-zinc-200: var(--color-zinc-200);
+  --color-zinc-100: var(--color-zinc-100);
+}
+
+@keyframes marching-ants {
+  0% {
+    background-position: 0 0, 100% 0, 100% 100%, 0 100%;
+  }
+  100% {
+    background-position: 40px 0, 100% 40px, 100% -40px, 0 -40px;
+  }
+}
+
+.animate-marching-ants {
+  background-image: 
+    linear-gradient(90deg, #6366f1 50%, transparent 50%), 
+    linear-gradient(180deg, #6366f1 50%, transparent 50%), 
+    linear-gradient(270deg, #6366f1 50%, transparent 50%), 
+    linear-gradient(360deg, #6366f1 50%, transparent 50%);
+  background-position: 0 0, 100% 0, 100% 100%, 0 100%;
+  background-size: 8px 2px, 2px 8px, 8px 2px, 2px 8px;
+  background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
+  animation: marching-ants 1s linear infinite;
+}
+
+/* Elegant checkboard background for transparent canvas previews */
+.checkboard-bg {
+  background-image: 
+    linear-gradient(45deg, #cbd5e1 25%, transparent 25%), 
+    linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #cbd5e1 75%), 
+    linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: #ffffff;
+}
+
+:root.light .checkboard-bg {
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-color: #f8fafc;
+}
