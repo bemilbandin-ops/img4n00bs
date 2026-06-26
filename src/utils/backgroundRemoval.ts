@@ -1,4 +1,4 @@
-import imglyRemoveBackground from '@imgly/background-removal';
+import { removeBackground } from '@imgly/background-removal';
 
 import { createCanvas } from './bitmapStore';
 
@@ -175,7 +175,7 @@ const createMaskFromCutout = async (
 
 const upgradeMaskWithImgly = async (source: HTMLCanvasElement, liveMask: HTMLCanvasElement) => {
   const inputBlob = await canvasToBlob(source);
-  const cutoutBlob = await imglyRemoveBackground(inputBlob, {
+  const cutoutBlob = await removeBackground(inputBlob, {
     model: 'isnet_fp16',
     output: {
       format: 'image/png',
