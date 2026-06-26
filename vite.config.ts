@@ -4,7 +4,10 @@ import path from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig(() => {
+  const isGitHubPages = process.env.GITHUB_PAGES === 'true';
+
   return {
+    base: isGitHubPages ? '/img4n00bs/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

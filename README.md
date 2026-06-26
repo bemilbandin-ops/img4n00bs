@@ -56,6 +56,10 @@ npm run check
 
 `npm run lint` currently runs TypeScript checks. `npm run build` runs the production Vite build.
 
+## GitHub Pages
+
+The repository includes a GitHub Actions workflow that builds `main` with Vite and deploys the generated `dist/` folder to GitHub Pages. In the repository Pages settings, use GitHub Actions as the Pages source.
+
 ## Architecture notes
 
 - Layer metadata is held in React state and keyed by `sourceId`.
