@@ -52,7 +52,7 @@ export const toolHelp: Record<string, ToolHelpItem> = {
     mistake: 'If healing does not work, make sure you Alt-clicked a source area first.'
   },
   cloneStamp: {
-    title: 'Clone Stamp',
+    title: 'Copy from nearby / Clone',
     summary: 'Copy pixels from one area of the layer to another.',
     steps: [
       'Alt-click on a clean area to set the copy source.',
@@ -91,7 +91,7 @@ export const toolHelp: Record<string, ToolHelpItem> = {
     mistake: 'Cropping changes the document size. Use Undo if you make a mistake.'
   },
   select_rect: {
-    title: 'Box Selection',
+    title: 'Pick an area / Selection box',
     summary: 'Select a rectangular area to copy, erase, fill, or crop.',
     steps: [
       'Drag on the canvas to draw a select box.',
@@ -99,7 +99,7 @@ export const toolHelp: Record<string, ToolHelpItem> = {
     ]
   },
   select_ellipse: {
-    title: 'Oval Selection',
+    title: 'Pick an area / Oval selection',
     summary: 'Select a circular/oval area to copy, erase, fill, or crop.',
     steps: [
       'Drag on the canvas to draw a circular select bounds.',
@@ -107,7 +107,7 @@ export const toolHelp: Record<string, ToolHelpItem> = {
     ]
   },
   select_lasso: {
-    title: 'Lasso Selection',
+    title: 'Pick an area / Lasso selection',
     summary: 'Trace an irregular shape on the canvas to select it.',
     steps: [
       'Drag on the canvas to trace around an object.',
@@ -116,7 +116,7 @@ export const toolHelp: Record<string, ToolHelpItem> = {
     ]
   },
   eyedropper: {
-    title: 'Color Eyedropper',
+    title: 'Pick Color / Eyedropper',
     summary: 'Sample a color directly from your artwork.',
     steps: [
       'Click anywhere on the canvas to pick its color.',

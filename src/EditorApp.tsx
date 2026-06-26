@@ -16,6 +16,8 @@ import AdjustmentsPanel from './components/AdjustmentsPanel';
 import ToolOptions from './components/ToolOptions';
 import CanvasArea from './components/CanvasArea';
 import BackgroundTemplates, { BackgroundTemplate } from './components/BackgroundTemplates';
+import LearningTip from './components/LearningTip';
+import ContextualActionStrip from './components/ContextualActionStrip';
 
 import { 
   ToolType, 
@@ -60,11 +62,22 @@ import {
   formatLargeCanvasWarning,
   isLargeCanvas
 } from './utils/safeguards';
+import {
+  conceptTriggers,
+  type ConceptTriggerId,
+  type HelpLevel,
+  type RecipeId,
+  type StarterGoalId
+} from './data/learning';
 
 const HISTORY_LIMIT = 50;
 const MAX_RESIZE_DIMENSION = 5000;
 const MAX_EXPORT_DIMENSION = 8000;
 const MAX_RECENT_COLORS = 8;
+const STARTER_DONE_KEY = 'starter_launcher_done_v1';
+const OLD_ONBOARDING_DONE_KEY = 'onboarding_done_v1';
+const HELP_LEVEL_KEY = 'editor_help_level_v1';
+const SEEN_CONCEPTS_KEY = 'learning_seen_concepts_v1';
 type ResizeMode = 'image' | 'canvas';
 type CanvasResizeAnchor = 'center' | 'top-left';
 type ExportFormat = 'png' | 'jpeg' | 'webp';
@@ -148,6 +161,7 @@ export default function App() {
   const currentDrawStrokeLayerIdRef = useRef<string | null>(null);
   const bitmapStoreRef = useRef(new BitmapStore());
   const latestLayersRef = useRef<EditorLayer[]>([]);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const projectFileInputRef = useRef<HTMLInputElement>(null);
   const activePixelEditBeforeRef = useRef<HistoryEntry | null>(null);
   const [activeMaskLayerId, setActiveMaskLayerId] = useState<string | null>(null);
@@ -212,6 +226,24 @@ export default function App() {
   const [showBackgroundTemplatesModal, setShowBackgroundTemplatesModal] = useState(false);
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [helpLevel, setHelpLevel] = useState<HelpLevel>(() => {
+    const stored = localStorage.getItem(HELP_LEVEL_KEY);
+    return stored === 'explain' || stored === 'guide' ? stored : 'tips';
+  });
+  const [activeRecipeId, setActiveRecipeId] = useState<RecipeId | null>(null);
+  const [completedRecipeSteps, setCompletedRecipeSteps] = useState(0);
+  const [exportReached, setExportReached] = useState(false);
+  const [projectSaveReached, setProjectSaveReached] = useState(false);
+  const [selectionActionReached, setSelectionActionReached] = useState(false);
+  const [activeConceptId, setActiveConceptId] = useState<ConceptTriggerId | null>(null);
+  const [seenConceptIds, setSeenConceptIds] = useState<ConceptTriggerId[]>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SEEN_CONCEPTS_KEY) || '[]') as unknown;
+      return Array.isArray(parsed) ? parsed.filter((id): id is ConceptTriggerId => id in conceptTriggers) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Export Selector Options Modal
   const [showExportModal, setShowExportModal] = useState(false);
@@ -239,13 +271,79 @@ export default function App() {
 
   const isRemovingBackground = backgroundRemovalStatus === 'running';
 
-  // Load onboarding on first visit based on localStorage
+  const markConceptSeen = (id: ConceptTriggerId) => {
+    setSeenConceptIds(current => {
+      if (current.includes(id)) return current;
+      const next = [...current, id];
+      localStorage.setItem(SEEN_CONCEPTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const dismissConceptTip = () => {
+    if (activeConceptId) {
+      markConceptSeen(activeConceptId);
+    }
+    setActiveConceptId(null);
+  };
+
   useEffect(() => {
-    const done = localStorage.getItem('onboarding_done_v1');
+    if (activeConceptId) return;
+
+    const hasSelection = Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight));
+    const triggerOrder: ConceptTriggerId[] = [
+      showExportModal ? 'exportOpened' : null,
+      hasSelection ? 'selectionActive' : null,
+      layers.some(layer => layer.mask) ? 'maskUsed' : null,
+      layers.some(layer => layer.type === 'text') ? 'textLayer' : null,
+      layers.length >= 2 ? 'secondLayer' : null,
+      canvasWidth > 0 && activeTool.startsWith('select_') && !hasSelection ? 'noSelection' : null,
+      canvasWidth > 0 && layers.length <= 1 ? 'emptyLayers' : null
+    ].filter((id): id is ConceptTriggerId => Boolean(id));
+
+    const next = triggerOrder.find(id => !seenConceptIds.includes(id));
+    if (next) {
+      setActiveConceptId(next);
+      markConceptSeen(next);
+    }
+  }, [activeConceptId, activeTool, canvasWidth, canvasHeight, layers, seenConceptIds, selection, showExportModal]);
+
+  useEffect(() => {
+    if (!activeRecipeId) {
+      setCompletedRecipeSteps(0);
+      return;
+    }
+
+    const hasProject = canvasWidth > 0 && layers.length > 0;
+    const hasText = layers.some(layer => layer.type === 'text');
+    const hasSecondLayer = layers.length >= 2;
+    const hasSelection = Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight));
+    const adjusted = layers.some(layer => {
+      const adjustments = layer.adjustments;
+      return layer.filter !== 'none' || Object.values(adjustments).some(value => value !== 0);
+    });
+
+    const progressByRecipe: Record<RecipeId, number> = {
+      'fix-photo': [hasProject, activeTool === 'crop', adjusted, exportReached].filter(Boolean).length,
+      'make-meme': [hasProject, hasText, activeTool === 'move' || activeTool === 'text', exportReached].filter(Boolean).length,
+      'cut-out-object': [hasProject, activeTool.startsWith('select_'), hasSelection, selectionActionReached, exportReached || projectSaveReached].filter(Boolean).length,
+      'save-editable-project': [hasSecondLayer, projectSaveReached, exportReached].filter(Boolean).length
+    };
+
+    setCompletedRecipeSteps(progressByRecipe[activeRecipeId]);
+  }, [activeRecipeId, activeTool, canvasWidth, exportReached, layers, projectSaveReached, selection, selectionActionReached]);
+
+  // Load starter launcher on first visit based on localStorage.
+  useEffect(() => {
+    const done = localStorage.getItem(STARTER_DONE_KEY) || localStorage.getItem(OLD_ONBOARDING_DONE_KEY);
     if (!done) {
       setShowOnboarding(true);
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(HELP_LEVEL_KEY, helpLevel);
+  }, [helpLevel]);
 
   // Theme State
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -528,8 +626,66 @@ export default function App() {
 
   // Close onboarding
   const handleOnboardingClose = () => {
-    localStorage.setItem('onboarding_done_v1', 'true');
+    localStorage.setItem(STARTER_DONE_KEY, 'true');
     setShowOnboarding(false);
+  };
+
+  const handlePickPhoto = () => {
+    imageFileInputRef.current?.click();
+  };
+
+  const startRecipe = (id: RecipeId) => {
+    setActiveRecipeId(id);
+    setCompletedRecipeSteps(0);
+    setExportReached(false);
+    setProjectSaveReached(false);
+    setSelectionActionReached(false);
+    setActiveInspectorTab('help');
+  };
+
+  const handleStartGoal = (goal: StarterGoalId) => {
+    handleOnboardingClose();
+
+    if (goal === 'draw-blank') {
+      handleSelectSampleProject('blank');
+      setActiveTool('brush');
+      setActiveInspectorTab('tool');
+      startRecipe('save-editable-project');
+      return;
+    }
+
+    if (goal === 'open-sample') {
+      handleSelectSampleProject('cat');
+      startRecipe('fix-photo');
+      return;
+    }
+
+    if (goal === 'cut-out') {
+      if (canvasWidth === 0) {
+        handleSelectSampleProject('cat');
+      }
+      setActiveTool('select_rect');
+      setActiveInspectorTab('tool');
+      startRecipe('cut-out-object');
+      return;
+    }
+
+    if (goal === 'add-text-shapes') {
+      if (canvasWidth === 0) {
+        handleSelectSampleProject('blank');
+      }
+      setActiveTool('text');
+      setActiveInspectorTab('tool');
+      startRecipe('make-meme');
+      return;
+    }
+
+    setActiveTool('crop');
+    setActiveInspectorTab(canvasWidth > 0 ? 'adjust' : 'tool');
+    startRecipe('fix-photo');
+    if (canvasWidth === 0) {
+      handlePickPhoto();
+    }
   };
 
   // Initialize Project Canvas based on image file
@@ -669,6 +825,10 @@ export default function App() {
       img.crossOrigin = 'anonymous';
       img.onload = () => {
         handleInitializeWithImage(img, type === 'cat' ? 'Starter Cat' : 'Scenic Mountain');
+      };
+      img.onerror = () => {
+        handleSelectSampleProject('blank');
+        setUploadError('Sample could not load, so a blank canvas was opened instead.');
       };
       img.src = url;
     }
@@ -913,6 +1073,7 @@ export default function App() {
     setActiveLayerId(id);
     setActiveMaskLayerId(id);
     setSelection(clearSelection());
+    setSelectionActionReached(true);
     saveHistoryCommand('layer:mask', 'Add layer mask', nextStack, canvasWidth, canvasHeight, id, [maskId]);
   };
 
@@ -1022,6 +1183,7 @@ export default function App() {
     setActiveMaskLayerId(layerId);
     setSelection(clearSelection());
     setBackgroundRemovalPreview(null);
+    setSelectionActionReached(true);
     saveHistoryCommand('layer:mask', 'Remove background', nextStack, canvasWidth, canvasHeight, layerId, [maskId]);
   };
 
@@ -1795,6 +1957,7 @@ export default function App() {
     setCanvasHeight(targetH);
     setCropRect(null);
     setSelection(clearSelection());
+    setSelectionActionReached(true);
 
     if (activeTool === 'crop') {
       setActiveTool('brush');
@@ -1890,6 +2053,7 @@ export default function App() {
       `Copied Selection ${layers.length + 1}`
     );
     setUploadError('');
+    setSelectionActionReached(true);
     saveHistoryCommand('selection:copy-layer', 'Copy selection to layer', nextLayers, canvasWidth, canvasHeight, newLayer.id, [newLayer.sourceId]);
   };
 
@@ -1961,6 +2125,7 @@ export default function App() {
       baseLayers
     );
     setUploadError('');
+    setSelectionActionReached(true);
     saveHistorySnapshot(nextLayers, canvasWidth, canvasHeight, newLayer.id, 'Cut selection to layer', beforeCheckpoint);
   };
 
@@ -1976,6 +2141,7 @@ export default function App() {
       `Pasted Selection ${layers.length + 1}`
     );
     setUploadError('');
+    setSelectionActionReached(true);
     saveHistoryCommand('selection:paste-layer', 'Paste selection as layer', nextLayers, canvasWidth, canvasHeight, newLayer.id, [newLayer.sourceId]);
   };
 
@@ -2011,6 +2177,7 @@ export default function App() {
     setLayers(nextLayers);
     setSelection(clearSelection());
     setUploadError('');
+    setSelectionActionReached(true);
     saveHistorySnapshot(nextLayers, canvasWidth, canvasHeight, activeLayerId, 'Fill selection', beforeCheckpoint);
   };
 
@@ -2046,6 +2213,7 @@ export default function App() {
     setLayers(nextLayers);
     setSelection(clearSelection());
     setUploadError('');
+    setSelectionActionReached(true);
     saveHistorySnapshot(nextLayers, canvasWidth, canvasHeight, activeLayerId, 'Clear selection', beforeCheckpoint);
   };
 
@@ -2080,6 +2248,7 @@ export default function App() {
     link.click();
 
     setSelection(clearSelection());
+    setSelectionActionReached(true);
   };
 
   const handleCancelSelectionBounds = () => {
@@ -2396,6 +2565,7 @@ export default function App() {
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
+      setProjectSaveReached(true);
       setUploadError('');
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Project save failed.');
@@ -2480,6 +2650,7 @@ export default function App() {
     setExportLockAspect(true);
     setExportQuality(92);
     setUploadError('');
+    setExportReached(true);
     setShowExportModal(true);
   };
 
@@ -2597,6 +2768,7 @@ export default function App() {
 
   const activeLayer = layers.find(l => l.id === activeLayerId);
   const activeLayerName = activeLayer ? activeLayer.name : 'No Layer selected';
+  const hasSelectionBounds = Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight));
   const leftSidebarVisible = !leftSidebarCollapsed;
   const rightSidebarVisible = !rightSidebarCollapsed;
 
@@ -2622,6 +2794,9 @@ export default function App() {
         onResizeProject={handleOpenResizeDialog}
         onExport={handleOpenExportDialog}
         onShowHelp={() => setShowKeyboardShortcuts(true)}
+        onShowStart={() => setShowOnboarding(true)}
+        helpLevel={helpLevel}
+        onHelpLevelChange={setHelpLevel}
         canvasWidth={canvasWidth}
         canvasHeight={canvasHeight}
         theme={theme}
@@ -2641,8 +2816,31 @@ export default function App() {
         )}
 
         {/* Middle column: Interactive Painting Stage Workspace */}
-        <section className="flex flex-col min-h-0 min-w-0 h-full max-h-full" id="middle-canvas-stage">
-          <div className="mb-2 flex justify-end gap-2">
+        <section className="relative flex flex-col min-h-0 min-w-0 h-full max-h-full" id="middle-canvas-stage">
+          <div className="mb-2 flex flex-wrap justify-between gap-2">
+            <ContextualActionStrip
+              hasProject={canvasWidth > 0 && layers.length > 0}
+              hasSelection={hasSelectionBounds}
+              activeLayer={activeLayer}
+              onPickPhoto={handlePickPhoto}
+              onStartSample={() => handleSelectSampleProject('cat')}
+              onDrawBlank={() => handleSelectSampleProject('blank')}
+              onChangeTool={handleToolSelectionChange}
+              onFillSelection={handleFillSelectionPixels}
+              onClearSelection={handleClearSelectionPixels}
+              onCropSelection={handleExecuteCropSelection}
+              onMaskSelection={() => {
+                if (activeLayer && hasSelectionBounds) {
+                  handleAddLayerMask(activeLayer.id, 'selection');
+                }
+              }}
+              canMaskSelection={Boolean(activeLayer && !activeLayer.mask && hasSelectionBounds)}
+              onDeselect={handleCancelSelectionBounds}
+              onDuplicateLayer={handleDuplicateLayer}
+              onOpenAdjust={() => setActiveInspectorTab('adjust')}
+              onExport={handleOpenExportDialog}
+              onSaveProject={handleSaveProjectFile}
+            />
             <button
               type="button"
               onClick={() => setLeftSidebarCollapsed(value => !value)}
@@ -2666,6 +2864,15 @@ export default function App() {
               {rightSidebarCollapsed ? 'Show inspector' : 'Hide inspector'}
             </button>
           </div>
+          {activeConceptId && (
+            <div className="mb-2 w-full max-w-xl self-center">
+              <LearningTip
+                trigger={conceptTriggers[activeConceptId]}
+                level={helpLevel}
+                onDismiss={dismissConceptTip}
+              />
+            </div>
+          )}
           <CanvasArea
             key={`${leftSidebarCollapsed}-${rightSidebarCollapsed}`}
             layers={layers}
@@ -2725,7 +2932,7 @@ export default function App() {
                   onMergeLayers={handleMergeLayers}
                   onUpdateBlendMode={handleUpdateBlendMode}
                   activeMaskLayerId={activeMaskLayerId}
-                  hasSelection={Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight))}
+                  hasSelection={hasSelectionBounds}
                   onAddLayerMask={handleAddLayerMask}
                   onRemoveBackground={handlePreviewRemoveBackground}
                   isRemovingBackground={isRemovingBackground}
@@ -2779,7 +2986,7 @@ export default function App() {
                         shapeStrokeEnabled={shapeStrokeEnabled}
                         onShapeStrokeEnabledChange={handleShapeStrokeEnabledChange}
                         onCommitShapeEdit={handleCommitShapeEdit}
-                        hasSelection={selection.active}
+                        hasSelection={hasSelectionBounds}
                         onExecuteCropSelection={handleExecuteCropSelection}
                         onFillSelection={handleFillSelectionPixels}
                         onClearSelectionPixels={handleClearSelectionPixels}
@@ -2808,7 +3015,12 @@ export default function App() {
                       />
                     )}
                     {activeInspectorTab === 'help' && (
-                      <HelpPanel />
+                      <HelpPanel
+                        helpLevel={helpLevel}
+                        activeRecipeId={activeRecipeId}
+                        completedRecipeSteps={completedRecipeSteps}
+                        onStartRecipe={startRecipe}
+                      />
                     )}
                   </div>
                   <div className="flex-1 border-t border-zinc-900 pt-3 flex flex-col min-h-[150px] min-h-0">
@@ -2827,7 +3039,7 @@ export default function App() {
                       onMergeLayers={handleMergeLayers}
                       onUpdateBlendMode={handleUpdateBlendMode}
                       activeMaskLayerId={activeMaskLayerId}
-                      hasSelection={Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight))}
+                      hasSelection={hasSelectionBounds}
                       onAddLayerMask={handleAddLayerMask}
                       onRemoveBackground={handlePreviewRemoveBackground}
                       isRemovingBackground={isRemovingBackground}
@@ -2852,6 +3064,18 @@ export default function App() {
         className="hidden"
         onChange={handleProjectFileSelected}
         id="hidden-project-file-picker"
+      />
+      <input
+        ref={imageFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) handleFileLoaded(file);
+        }}
+        id="hidden-image-file-picker"
       />
 
       {uploadError && (
@@ -3102,7 +3326,7 @@ export default function App() {
       {showOnboarding && (
         <Onboarding
           onClose={handleOnboardingClose}
-          onSelectSample={handleSelectSampleProject}
+          onStartGoal={handleStartGoal}
         />
       )}
 
@@ -3121,7 +3345,7 @@ export default function App() {
               Export picture
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed font-sans mb-4">
-              Choose format, output size, compression, and how transparent areas should be handled.
+              Export Picture makes a shareable PNG, JPG, or WebP. Save Project keeps layers editable for later.
             </p>
 
             <div className="grid grid-cols-3 gap-2 mb-4" id="export-format-options">

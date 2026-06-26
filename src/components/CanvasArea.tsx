@@ -696,15 +696,15 @@ export default function CanvasArea({
             </div>
             
             <h3 className="text-xl font-extrabold text-white tracking-tight font-sans mb-2">
-              Let's craft some magic!
+              Start with a photo, sample, or blank canvas
             </h3>
             <p className="ui-body font-sans mb-6">
-              Drag and drop any picture here, search a local file, or experience one of our fun starter playgrounds:
+              Open a photo to edit, start a sample to learn, or draw on a blank canvas.
             </p>
 
             {/* Standard File Picker Core */}
             <label className="cursor-pointer bg-white hover:bg-zinc-200 text-black font-extrabold py-3 px-6 rounded-2xl text-sm shadow-md transition inline-flex items-center gap-2 mb-8 select-none">
-              <Upload className="w-4 h-4" /> Pick a Photo
+              <Upload className="w-4 h-4" /> Open photo
               <input
                 type="file"
                 onChange={handleFileChange}
@@ -716,7 +716,7 @@ export default function CanvasArea({
             {/* Beginner Template Quick Try */}
             <div className="w-full flex flex-col gap-3" id="starter-samples-block">
               <span className="text-xs uppercase font-bold text-text-secondary tracking-wider font-sans">
-                Try a Starter Desk Project
+                Start sample
               </span>
               <div className="grid grid-cols-3 gap-3" id="onboarding-starter-cards">
                 <button

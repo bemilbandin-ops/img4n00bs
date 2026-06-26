@@ -548,7 +548,7 @@ export default function ToolOptions({
 
             {!hasSelection ? (
               <p className="text-[11px] text-zinc-500 leading-normal text-center py-2">
-                Drag on the canvas to select an area first.
+                No area selected. Drag on the canvas before cutting, filling, or masking part of the image.
               </p>
             ) : (
               <div className="flex flex-col gap-2">

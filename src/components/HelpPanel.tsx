@@ -5,8 +5,22 @@
 
 import { conceptHelp } from '../data/conceptHelp';
 import { HelpCircle, BookOpen, ExternalLink } from 'lucide-react';
+import { type HelpLevel, type RecipeId } from '../data/learning';
+import RecipePanel from './RecipePanel';
 
-export default function HelpPanel() {
+interface HelpPanelProps {
+  helpLevel: HelpLevel;
+  activeRecipeId: RecipeId | null;
+  completedRecipeSteps: number;
+  onStartRecipe: (id: RecipeId) => void;
+}
+
+export default function HelpPanel({
+  helpLevel,
+  activeRecipeId,
+  completedRecipeSteps,
+  onStartRecipe
+}: HelpPanelProps) {
   return (
     <div className="ui-panel flex flex-col h-full rounded-xl border p-4 overflow-y-auto" id="help-panel">
       <div className="mb-4 border-b border-zinc-900 pb-3" id="help-panel-header">
@@ -23,22 +37,47 @@ export default function HelpPanel() {
         </a>
       </div>
 
+      <div className="mb-4">
+        <RecipePanel
+          activeRecipeId={activeRecipeId}
+          completedStepCount={completedRecipeSteps}
+          onStartRecipe={onStartRecipe}
+        />
+      </div>
+
       <div className="flex flex-col gap-4" id="help-concepts-list">
-        {conceptHelp.map((concept, index) => (
-          <div 
-            key={index} 
-            className="ui-card p-4 border rounded-xl transition-all"
-            id={`help-concept-item-${index}`}
-          >
+        {helpLevel === 'tips' ? (
+          <div className="ui-card p-4 border rounded-xl transition-all" id="help-tips-empty-state">
             <h3 className="text-[15px] font-semibold text-text-primary flex items-center gap-1.5 mb-2 leading-snug">
               <HelpCircle className="w-3.5 h-3.5 text-text-secondary shrink-0" />
-              {concept.title}
+              Tips mode
             </h3>
             <p className="ui-body font-normal">
-              {concept.desc}
+              Contextual nudges appear while you edit. Switch to Explain or Guide me for deeper concept cards.
             </p>
           </div>
-        ))}
+        ) : (
+          conceptHelp.map((concept, index) => (
+            <div 
+              key={index} 
+              className="ui-card p-4 border rounded-xl transition-all"
+              id={`help-concept-item-${index}`}
+            >
+              <h3 className="text-[15px] font-semibold text-text-primary flex items-center gap-1.5 mb-2 leading-snug">
+                <HelpCircle className="w-3.5 h-3.5 text-text-secondary shrink-0" />
+                {concept.title}
+              </h3>
+              <p className="ui-body font-normal">
+                {concept.desc}
+              </p>
+              {helpLevel === 'guide' && (
+                <p className="mt-2 text-xs text-text-secondary">
+                  Try it: create the state this concept describes, then use the action strip for the next step.
+                </p>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       <div className="mt-6 p-4 rounded-xl border border-dashed border-panel-border bg-black/20 text-center">

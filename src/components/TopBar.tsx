@@ -15,8 +15,11 @@ import {
   Download, 
   HelpCircle,
   Sun,
-  Moon
+  Moon,
+  Play
 } from 'lucide-react';
+import { type HelpLevel } from '../data/learning';
+import HelpLevelSelector from './HelpLevelSelector';
 
 interface TopBarProps {
   onUndo: () => void;
@@ -29,6 +32,9 @@ interface TopBarProps {
   onResizeProject: () => void;
   onExport: () => void;
   onShowHelp: () => void;
+  onShowStart: () => void;
+  helpLevel: HelpLevel;
+  onHelpLevelChange: (level: HelpLevel) => void;
   canvasWidth: number;
   canvasHeight: number;
   theme: 'dark' | 'light';
@@ -46,6 +52,9 @@ export default function TopBar({
   onResizeProject,
   onExport,
   onShowHelp,
+  onShowStart,
+  helpLevel,
+  onHelpLevelChange,
   canvasWidth,
   canvasHeight,
   theme,
@@ -133,6 +142,18 @@ export default function TopBar({
       <div className="flex items-center gap-2" id="topbar-right-actions">
         <button
           type="button"
+          onClick={onShowStart}
+          className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
+          id="btn-topbar-start"
+          title="Open starter launcher"
+        >
+          <Play className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Start</span>
+        </button>
+        <HelpLevelSelector value={helpLevel} onChange={onHelpLevelChange} />
+
+        <button
+          type="button"
           onClick={onOpenProject}
           className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
           id="btn-topbar-open-project"
@@ -146,7 +167,7 @@ export default function TopBar({
           onClick={onSaveProject}
           className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
           id="btn-save-layered-project"
-          title="Save layered project file (.n00bs)"
+          title="Save editable file / Project (.n00bs)"
         >
           <Save className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Save Project</span>
@@ -168,10 +189,10 @@ export default function TopBar({
           onClick={onExport}
           className="ui-primary-button flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl font-bold text-[13px] shadow transition active:scale-95 cursor-pointer border"
           id="btn-main-export"
-          title="Export flattened picture (PNG/JPG/WebP)"
+          title="Shareable picture / Export (PNG/JPG/WebP)"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Save Picture</span>
+          <span>Export Picture</span>
         </button>
 
         <div className="w-[1px] h-5 bg-zinc-900 shrink-0 mx-0.5" />

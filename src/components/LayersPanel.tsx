@@ -206,7 +206,7 @@ export default function LayersPanel({
         {layers.length === 0 ? (
           <div className="py-8 text-center ui-helper font-sans flex flex-col items-center justify-center h-full gap-2" id="empty-layers-display">
             <ImageIcon className="w-8 h-8 opacity-25" />
-            <span>No layers in this project.<br/>Add a layer to start editing.</span>
+            <span>Nothing is separate yet.<br/>Add text, a shape, or another image to keep edits independent.</span>
           </div>
         ) : (
           [...layers].reverse().map((layer, index) => {
@@ -368,10 +368,80 @@ export default function LayersPanel({
                           Delete
                         </button>
                       </div>
+
+                      {(layer.type === 'image' || layer.type === 'drawing') && (
+                        <div className="flex flex-col gap-1.5 rounded-lg border border-zinc-900 bg-black/20 p-2">
+                          <span className="text-[11px] font-bold text-zinc-500">Hide without deleting / Mask</span>
+                          {layer.mask ? (
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectLayerMask(layer.id);
+                                }}
+                                className="flex-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1 px-1.5 rounded text-[11px] transition cursor-pointer"
+                                id={`btn-select-mask-${layer.id}`}
+                              >
+                                {activeMaskLayerId === layer.id ? 'Editing Mask' : 'Edit Mask'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleLayerMask(layer.id);
+                                }}
+                                className="flex-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1 px-1.5 rounded text-[11px] transition cursor-pointer"
+                                id={`btn-toggle-mask-${layer.id}`}
+                              >
+                                {layer.mask.enabled ? 'Enabled' : 'Disabled'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddLayerMask(layer.id, 'reveal');
+                                }}
+                                className="flex-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1 px-1.5 rounded text-[11px] transition cursor-pointer"
+                                id={`btn-add-reveal-mask-${layer.id}`}
+                              >
+                                Reveal All
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddLayerMask(layer.id, 'hide');
+                                }}
+                                className="flex-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1 px-1.5 rounded text-[11px] transition cursor-pointer"
+                                id={`btn-add-hide-mask-${layer.id}`}
+                              >
+                                Hide All
+                              </button>
+                              {hasSelection && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddLayerMask(layer.id, 'selection');
+                                  }}
+                                  className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1 px-1.5 rounded text-[11px] transition cursor-pointer"
+                                  id={`btn-add-selection-mask-${layer.id}`}
+                                >
+                                  Mask from Selection
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Advanced Layer Controls Section */}
-                    <AdvancedSection title="Advanced layer controls" defaultOpen={true}>
+                    <AdvancedSection title="More layer controls">
                       <div className="flex flex-col gap-3">
                         {/* Rename option */}
                         <div className="flex items-center justify-between text-xs border-b border-zinc-900 pb-2">
@@ -436,7 +506,7 @@ export default function LayersPanel({
 
                         {/* Mask Controls */}
                         <div className="flex flex-col gap-1.5 border-t border-zinc-900 pt-2.5">
-                          <span className="text-xs text-zinc-400 font-semibold">Mask — hide/reveal parts</span>
+                          <span className="text-xs text-zinc-400 font-semibold">Hide without deleting / Mask</span>
                           {layer.mask ? (
                             <div className="flex items-center gap-1.5">
                               <button

@@ -29,60 +29,70 @@ export default function ToolRail({ activeTool, onChangeTool }: ToolRailProps) {
     {
       id: 'move' as ToolType,
       label: 'Move',
+      title: 'Move',
       icon: <MousePointer className="w-4 h-4" />,
       active: activeTool === 'move'
     },
     {
       id: 'brush' as ToolType,
       label: 'Brush',
+      title: 'Brush',
       icon: <Paintbrush className="w-4 h-4" />,
       active: activeTool === 'brush'
     },
     {
       id: 'eraser' as ToolType,
       label: 'Erase',
+      title: 'Erase',
       icon: <Eraser className="w-4 h-4" />,
       active: activeTool === 'eraser'
     },
     {
       id: 'healingBrush' as ToolType,
       label: 'Heal',
+      title: 'Heal',
       icon: <Sparkles className="w-4 h-4" />,
       active: activeTool === 'healingBrush'
     },
     {
       id: 'cloneStamp' as ToolType,
-      label: 'Clone',
+      label: 'Copy',
+      title: 'Copy from nearby / Clone',
       icon: <Stamp className="w-4 h-4" />,
       active: activeTool === 'cloneStamp'
     },
     {
       id: 'text' as ToolType,
       label: 'Text',
+      title: 'Text',
       icon: <Type className="w-4 h-4" />,
       active: activeTool === 'text'
     },
     {
       id: 'shape' as ToolType,
       label: 'Shape',
+      title: 'Shape',
       icon: <Square className="w-4 h-4" />,
       active: activeTool === 'shape'
     },
     {
       id: 'crop' as ToolType,
       label: 'Crop',
+      title: 'Crop',
       icon: <Crop className="w-4 h-4" />,
       active: activeTool === 'crop'
     },
     {
       id: 'select_rect' as ToolType,
-      label: 'Select',
+      label: 'Pick',
+      title: 'Pick an area / Selection',
       icon: <Scissors className="w-4 h-4" />,
       active: isSelectionActive
     },
     {
       id: 'eyedropper' as ToolType,
       label: 'Color',
+      title: 'Pick Color / Eyedropper',
       icon: <Pipette className="w-4 h-4" />,
       active: activeTool === 'eyedropper'
     }
@@ -100,7 +110,7 @@ export default function ToolRail({ activeTool, onChangeTool }: ToolRailProps) {
             key={t.label}
             type="button"
             onClick={() => {
-              if (t.label === 'Select') {
+              if (t.id === 'select_rect') {
                 if (!isSelectionActive) {
                   onChangeTool('select_rect');
                 }
@@ -114,7 +124,7 @@ export default function ToolRail({ activeTool, onChangeTool }: ToolRailProps) {
                 : 'bg-zinc-900/40 text-text-secondary border-transparent hover:bg-zinc-900 hover:text-text-primary hover:border-panel-border'
             }`}
             id={`btn-select-tool-${t.id}`}
-            title={t.label}
+            title={t.title || t.label}
           >
             <div className={`p-1.5 rounded-lg ${t.active ? 'bg-zinc-100 text-black' : 'bg-black text-text-secondary'}`}>
               {t.icon}
