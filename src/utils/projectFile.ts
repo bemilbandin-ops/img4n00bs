@@ -3,6 +3,8 @@ import { BitmapStore, createCanvas } from './bitmapStore';
 
 const PROJECT_FORMAT = 'photoshop-for-n00bs-project';
 const PROJECT_VERSION = 1;
+const MAX_PROJECT_DIMENSION = 8000;
+const MAX_SOURCE_DATA_URL_LENGTH = 40 * 1024 * 1024;
 
 interface SavedBitmapSource {
   width: number;
@@ -196,6 +198,9 @@ export const deserializeProjectFile = async (rawText: string): Promise<LoadedPro
   if (canvasWidth <= 0 || canvasHeight <= 0) {
     throw new Error('Invalid project file: canvas dimensions must be positive.');
   }
+  if (canvasWidth > MAX_PROJECT_DIMENSION || canvasHeight > MAX_PROJECT_DIMENSION) {
+    throw new Error('Invalid project file: canvas dimensions exceed the supported limit.');
+  }
 
   if (!Array.isArray(project.layers)) {
     throw new Error('Invalid project file: layers are missing.');
@@ -312,9 +317,23 @@ export const deserializeProjectFile = async (rawText: string): Promise<LoadedPro
       throw new Error(`Invalid project file: source ${sourceId} is malformed.`);
     }
     const dataUrl = requireString(rawSource.dataUrl, `source ${sourceId}.dataUrl`);
-    const canvas = await readImageDataUrl(dataUrl);
+    if (!dataUrl.startsWith('data:image/png;base64,')) {
+      throw new Error(`Invalid project file: source ${sourceId} bitmap source must be a PNG data URL.`);
+    }
+    if (dataUrl.length > MAX_SOURCE_DATA_URL_LENGTH) {
+      throw new Error(`Invalid project file: source ${sourceId} bitmap source is too large.`);
+    }
     const expectedWidth = Math.round(requireNumber(rawSource.width, `source ${sourceId}.width`));
     const expectedHeight = Math.round(requireNumber(rawSource.height, `source ${sourceId}.height`));
+    if (
+      expectedWidth <= 0 ||
+      expectedHeight <= 0 ||
+      expectedWidth > MAX_PROJECT_DIMENSION ||
+      expectedHeight > MAX_PROJECT_DIMENSION
+    ) {
+      throw new Error(`Invalid project file: source ${sourceId} dimensions exceed the supported limit.`);
+    }
+    const canvas = await readImageDataUrl(dataUrl);
 
     if (canvas.width !== expectedWidth || canvas.height !== expectedHeight) {
       throw new Error(`Invalid project file: source ${sourceId} dimensions do not match its image data.`);

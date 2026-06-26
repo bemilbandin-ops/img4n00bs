@@ -54,7 +54,6 @@ import {
 } from './utils/history';
 import { deserializeProjectFile, serializeProjectFile } from './utils/projectFile';
 import { addSelectionPath, clearSelection, getSelectionBounds } from './utils/selection';
-import { createBackgroundRemovalMask } from './utils/backgroundRemoval';
 import {
   LARGE_EXPORT_PIXEL_WARNING,
   LARGE_IMAGE_PIXEL_WARNING,
@@ -948,6 +947,7 @@ export default function App() {
 
     try {
       const maskId = createLayerId('mask');
+      const { createBackgroundRemovalMask } = await import('./utils/backgroundRemoval');
       const mask = await createBackgroundRemovalMask(source);
 
       // Stale-operation guard: verify nothing changed while we awaited
@@ -1734,11 +1734,6 @@ export default function App() {
     const oldSize = { width: canvasWidth, height: canvasHeight };
     const newSize = { width: targetW, height: targetH };
     const cropOrigin = { x: sx, y: sy };
-    const cropOffset = {
-      x: Math.round((canvasWidth - targetW) / 2),
-      y: Math.round((canvasHeight - targetH) / 2)
-    };
-
     const croppedLayers = layers.map(layer => {
       const sourceCanvas = bitmapStoreRef.current.getCanvas(layer.sourceId);
       const croppedCanvas = createCanvas(targetW, targetH);
@@ -1747,8 +1742,8 @@ export default function App() {
       if (ctx && sourceCanvas && (layer.type === 'image' || layer.type === 'drawing')) {
         ctx.drawImage(
           sourceCanvas,
-          cropOffset.x,
-          cropOffset.y,
+          sx,
+          sy,
           targetW,
           targetH,
           0,
@@ -2306,6 +2301,30 @@ export default function App() {
         renderShapeToLayer(updatedLayer, bitmapStoreRef.current);
       }
 
+      if (updatedLayer.type === 'image' || updatedLayer.type === 'drawing') {
+        const sourceCanvas = bitmapStoreRef.current.getCanvas(layer.sourceId);
+        const resizedCanvas = createCanvas(targetW, targetH);
+        const ctx = resizedCanvas.getContext('2d');
+
+        if (ctx && sourceCanvas) {
+          ctx.drawImage(sourceCanvas, offsetX, offsetY);
+        }
+
+        bitmapStoreRef.current.setCanvas(layer.sourceId, resizedCanvas);
+      }
+
+      if (updatedLayer.mask) {
+        const sourceMask = bitmapStoreRef.current.getCanvas(updatedLayer.mask.bitmapId);
+        const resizedMask = createCanvas(targetW, targetH);
+        const maskCtx = resizedMask.getContext('2d');
+
+        if (maskCtx && sourceMask) {
+          maskCtx.drawImage(sourceMask, offsetX, offsetY);
+        }
+
+        bitmapStoreRef.current.setCanvas(updatedLayer.mask.bitmapId, resizedMask);
+      }
+
       return updatedLayer;
     });
   };
@@ -2538,18 +2557,23 @@ export default function App() {
     const ext = extByFormat[exportFormat];
     const quality = exportFormat === 'png' ? undefined : Math.max(0.01, Math.min(1, exportQuality / 100));
 
-    const blob = await canvasToBlob(exportCanvas, mime, quality);
-    const link = document.createElement('a');
-    link.download = `beginner_masterpiece_${targetW}x${targetH}_${Date.now()}.${ext}`;
+    try {
+      const blob = await canvasToBlob(exportCanvas, mime, quality);
+      const link = document.createElement('a');
+      link.download = `beginner_masterpiece_${targetW}x${targetH}_${Date.now()}.${ext}`;
 
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } else {
-      link.href = exportCanvas.toDataURL(mime, quality);
-      link.click();
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } else {
+        link.href = exportCanvas.toDataURL(mime, quality);
+        link.click();
+      }
+    } catch {
+      setUploadError('Export failed: the browser could not encode this image.');
+      return;
     }
 
     setShowExportModal(false);

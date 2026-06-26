@@ -119,7 +119,9 @@ test('eraser keeps the selected image layer instead of creating a drawing layer'
   await page.mouse.up();
 
   await expect(page.locator('#layers-stack-list').getByText(/Drawing Layer/)).toHaveCount(0);
-  await expect(page.locator('#layers-stack-list [id^="layer-card-"]').filter({ hasText: 'eraser-fixture' })).toHaveClass(/text-white/);
+  await expect(
+    page.locator('#layers-stack-list [id^="layer-card-"]').filter({ hasText: 'eraser-fixture' })
+  ).toHaveAttribute('data-active', 'true');
   await expect.poll(async () => {
     return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement, point) => {
       return canvas.getContext('2d')!.getImageData(point!.x, point!.y, 1, 1).data[3];
@@ -127,11 +129,86 @@ test('eraser keeps the selected image layer instead of creating a drawing layer'
   }).toBeLessThan(beforeAlpha);
 });
 
-test('main editor workflow round-trips project and exports png', async ({ page }, testInfo) => {
-  console.log('goto');
+test('crop to selection keeps the selected source pixels', async ({ page }) => {
   await page.goto('/');
 
-  console.log('upload');
+  await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    name: 'crop-fixture.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+        <rect width="50" height="100" fill="red"/>
+        <rect x="50" width="50" height="100" fill="blue"/>
+      </svg>
+    `)
+  });
+
+  await page.locator('#btn-select-tool-select_rect').click();
+  const box = await page.locator('#active-drawing-canvas-element').boundingBox();
+  expect(box).not.toBeNull();
+
+  await page.mouse.move(box!.x + box!.width * 0.6, box!.y + box!.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.95, box!.y + box!.height * 0.94);
+  await page.mouse.up();
+
+  await page.locator('#btn-crop-to-selection').click();
+
+  await expect.poll(async () => {
+    return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement) => ({
+      width: canvas.width,
+      height: canvas.height,
+      pixel: Array.from(canvas.getContext('2d')!.getImageData(5, 5, 1, 1).data)
+    }));
+  }).toEqual({
+    width: 35,
+    height: 80,
+    pixel: [0, 0, 255, 255]
+  });
+});
+
+test('canvas resize center anchor moves bitmap pixels to the center', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    name: 'resize-fixture.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+        <rect width="100" height="100" fill="transparent"/>
+        <rect x="0" y="0" width="10" height="10" fill="lime"/>
+      </svg>
+    `)
+  });
+
+  await page.locator('#btn-topbar-resize').click();
+  await page.locator('#resize-mode-canvas').click();
+  await page.locator('#resize-width-input').fill('200');
+  await page.locator('#resize-height-input').fill('200');
+  await page.locator('#resize-anchor-center').click();
+  await page.locator('#btn-apply-resize').click();
+
+  await expect.poll(async () => {
+    return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement) => {
+      const ctx = canvas.getContext('2d')!;
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        oldTopLeft: Array.from(ctx.getImageData(5, 5, 1, 1).data),
+        centeredPixel: Array.from(ctx.getImageData(55, 55, 1, 1).data)
+      };
+    });
+  }).toEqual({
+    width: 200,
+    height: 200,
+    oldTopLeft: [0, 0, 0, 0],
+    centeredPixel: [0, 255, 0, 255]
+  });
+});
+
+test('main editor workflow round-trips project and exports png', async ({ page }, testInfo) => {
+  await page.goto('/');
+
   await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
     name: 'fixture.png',
     mimeType: 'image/png',
@@ -139,13 +216,11 @@ test('main editor workflow round-trips project and exports png', async ({ page }
   });
   await expect(page.locator('#active-drawing-canvas-element')).toBeVisible();
 
-  console.log('text');
   await page.locator('#btn-select-tool-text').click();
   await page.locator('#input-text-content').fill('Round trip text');
   await page.locator('#btn-add-new-text-layer-opt').click();
   await expect(page.locator('#layers-stack-list').getByText(/Text Layer/).first()).toBeVisible();
 
-  console.log('move rotate');
   await page.locator('#btn-select-tool-move').click();
   let box = await artboard(page).boundingBox();
   expect(box).not.toBeNull();
@@ -158,19 +233,16 @@ test('main editor workflow round-trips project and exports png', async ({ page }
     force: true
   });
 
-  console.log('save project');
   const projectDownload = page.waitForEvent('download');
   await page.locator('#btn-save-layered-project').click();
   const projectPath = await (await projectDownload).path();
   expect(projectPath).toBeTruthy();
 
-  console.log('open project');
   await page.locator('#hidden-project-file-picker').setInputFiles(projectPath!);
   await page.locator('#layers-stack-list').getByText(/Text Layer/).first().click();
   await page.locator('#btn-select-tool-text').click();
   await expect(page.locator('#input-text-content')).toHaveValue('Round trip text');
 
-  console.log('selection fill');
   await page.locator('#layers-stack-list').getByText('fixture').click();
   await page.locator('#btn-select-tool-select_rect').click();
   
@@ -190,13 +262,11 @@ test('main editor workflow round-trips project and exports png', async ({ page }
   await page.locator('#btn-fill-selection').click();
   await expect(page.locator('#shape-selection-antbox')).toBeHidden();
 
-  console.log('mask');
   await page.locator('#layers-stack-list').getByText('fixture').click();
   await page.locator('[id^="btn-add-reveal-mask-"]').first().click();
   await page.locator('[id^="btn-toggle-mask-"]').first().click();
   await page.locator('[id^="btn-toggle-mask-"]').first().click();
 
-  console.log('clone undo redo');
   await page.locator('#btn-select-tool-cloneStamp').click();
   const boxAfterOpen = await artboard(page).boundingBox();
   expect(boxAfterOpen).not.toBeNull();
@@ -212,7 +282,6 @@ test('main editor workflow round-trips project and exports png', async ({ page }
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z');
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z');
 
-  console.log('export');
   await page.locator('#btn-main-export').click({ force: true, timeout: 10_000 });
   await expect(page.locator('#export-modal-overlay')).toBeVisible();
   const exportDownload = page.waitForEvent('download', { timeout: 10_000 });

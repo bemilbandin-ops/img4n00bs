@@ -84,6 +84,36 @@ describe('projectFile', () => {
     await expect(deserializeProjectFile(raw)).rejects.toThrow('Unsupported project file version 99');
   });
 
+  it('rejects project bitmap sources that are not saved PNG data URLs', async () => {
+    const raw = JSON.stringify({
+      format: 'photoshop-for-n00bs-project',
+      projectVersion: 1,
+      createdAt: new Date().toISOString(),
+      canvas: { width: 10, height: 10 },
+      activeLayerId: 'layer-1',
+      layers: [makeLayer()],
+      sources: {
+        'src-1': { width: 10, height: 10, dataUrl: 'data:text/html;base64,PGgxPk5vPC9oMT4=' }
+      }
+    });
+
+    await expect(deserializeProjectFile(raw)).rejects.toThrow(/bitmap source/i);
+  });
+
+  it('rejects impossible project canvas dimensions before decoding sources', async () => {
+    const raw = JSON.stringify({
+      format: 'photoshop-for-n00bs-project',
+      projectVersion: 1,
+      createdAt: new Date().toISOString(),
+      canvas: { width: 100000, height: 100000 },
+      activeLayerId: '',
+      layers: [],
+      sources: {}
+    });
+
+    await expect(deserializeProjectFile(raw)).rejects.toThrow(/canvas dimensions/i);
+  });
+
   it('rejects a project layer that references missing mask data', async () => {
     vi.stubGlobal('Image', class {
       width = 1;

@@ -230,6 +230,7 @@ export default function LayersPanel({
             return (
               <div
                 key={layer.id}
+                data-active={isActive ? 'true' : 'false'}
                 className={`flex flex-col gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
                   isActive
                     ? 'ui-card border-panel-border text-text-primary shadow-md'
