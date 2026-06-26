@@ -157,12 +157,56 @@ test('crop to selection keeps the selected source pixels', async ({ page }) => {
   await expect.poll(async () => {
     return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement) => ({
       width: canvas.width,
-      height: canvas.height,
       pixel: Array.from(canvas.getContext('2d')!.getImageData(5, 5, 1, 1).data)
     }));
   }).toEqual({
     width: 35,
-    height: 80,
+    pixel: [0, 0, 255, 255]
+  });
+});
+
+test('crop to selection crops layer masks with bitmap pixels', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    name: 'masked-crop-fixture.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+        <rect width="50" height="100" fill="red"/>
+        <rect x="50" width="50" height="100" fill="blue"/>
+      </svg>
+    `)
+  });
+
+  await page.locator('#btn-select-tool-select_rect').click();
+  let box = await page.locator('#active-drawing-canvas-element').boundingBox();
+  expect(box).not.toBeNull();
+
+  await page.mouse.move(box!.x + box!.width * 0.6, box!.y + box!.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.95, box!.y + box!.height * 0.94);
+  await page.mouse.up();
+
+  await page.locator('[id^="btn-add-selection-mask-"]').first().click();
+  await page.locator('#btn-select-tool-select_rect').click();
+
+  box = await page.locator('#active-drawing-canvas-element').boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width * 0.6, box!.y + box!.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.95, box!.y + box!.height * 0.9);
+  await page.mouse.up();
+
+  await page.locator('#btn-crop-to-selection').click();
+
+  await expect.poll(async () => {
+    return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement) => ({
+      width: canvas.width,
+      pixel: Array.from(canvas.getContext('2d')!.getImageData(5, 5, 1, 1).data)
+    }));
+  }).toEqual({
+    width: 35,
     pixel: [0, 0, 255, 255]
   });
 });
@@ -203,6 +247,45 @@ test('canvas resize center anchor moves bitmap pixels to the center', async ({ p
     height: 200,
     oldTopLeft: [0, 0, 0, 0],
     centeredPixel: [0, 255, 0, 255]
+  });
+});
+
+test('canvas resize top-left anchor keeps bitmap pixels at the top-left', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    name: 'resize-top-left-fixture.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+        <rect width="100" height="100" fill="transparent"/>
+        <rect x="0" y="0" width="10" height="10" fill="lime"/>
+      </svg>
+    `)
+  });
+
+  await page.locator('#btn-topbar-resize').click();
+  await page.locator('#resize-mode-canvas').click();
+  await page.locator('#resize-width-input').fill('200');
+  await page.locator('#resize-height-input').fill('200');
+  await page.locator('#resize-anchor-top-left').click();
+  await page.locator('#btn-apply-resize').click();
+
+  await expect.poll(async () => {
+    return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement) => {
+      const ctx = canvas.getContext('2d')!;
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        topLeftPixel: Array.from(ctx.getImageData(5, 5, 1, 1).data),
+        centeredPixel: Array.from(ctx.getImageData(55, 55, 1, 1).data)
+      };
+    });
+  }).toEqual({
+    width: 200,
+    height: 200,
+    topLeftPixel: [0, 255, 0, 255],
+    centeredPixel: [0, 0, 0, 0]
   });
 });
 

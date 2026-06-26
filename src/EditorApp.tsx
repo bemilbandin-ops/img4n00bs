@@ -1755,6 +1755,18 @@ export default function App() {
 
       bitmapStoreRef.current.setCanvas(layer.sourceId, croppedCanvas);
 
+      if (layer.mask) {
+        const sourceMask = bitmapStoreRef.current.getCanvas(layer.mask.bitmapId);
+        const croppedMask = createCanvas(targetW, targetH);
+        const maskCtx = croppedMask.getContext('2d');
+
+        if (maskCtx && sourceMask) {
+          maskCtx.drawImage(sourceMask, sx, sy, targetW, targetH, 0, 0, targetW, targetH);
+        }
+
+        bitmapStoreRef.current.setCanvas(layer.mask.bitmapId, croppedMask);
+      }
+
       const updated: EditorLayer = {
         ...layer,
         transform: cropLayerTransform(layer.transform, oldSize, newSize, cropOrigin)
@@ -2281,7 +2293,11 @@ export default function App() {
 
     return layers.map((layer) => {
       const updatedLayer = cloneLayer(layer);
-      updatedLayer.transform = offsetLayerTransform(layer.transform, oldSize, newSize, offset);
+      if (updatedLayer.type === 'image' || updatedLayer.type === 'drawing') {
+        updatedLayer.transform = { ...layer.transform };
+      } else {
+        updatedLayer.transform = offsetLayerTransform(layer.transform, oldSize, newSize, offset);
+      }
       if (updatedLayer.type === 'text') {
         updatedLayer.textData = {
           ...updatedLayer.textData,
