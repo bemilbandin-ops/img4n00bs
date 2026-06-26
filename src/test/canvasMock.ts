@@ -269,6 +269,11 @@ class MockCanvas {
     return 'data:image/png;base64,mock';
   }
 
+  toBlob(callback: (blob: Blob | null) => void) {
+    // Provide a non-null Blob so canvasToBlob resolves successfully.
+    callback(new Blob(['mock'], { type: 'image/png' }));
+  }
+
   getPixel(x: number, y: number): [number, number, number, number] {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return [0, 0, 0, 0];
     const offset = (y * this.width + x) * 4;

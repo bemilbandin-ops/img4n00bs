@@ -15,6 +15,7 @@ import LayersPanel from './components/LayersPanel';
 import AdjustmentsPanel from './components/AdjustmentsPanel';
 import ToolOptions from './components/ToolOptions';
 import CanvasArea from './components/CanvasArea';
+import BackgroundTemplates, { BackgroundTemplate } from './components/BackgroundTemplates';
 
 import { 
   ToolType, 
@@ -69,6 +70,7 @@ type ResizeMode = 'image' | 'canvas';
 type CanvasResizeAnchor = 'center' | 'top-left';
 type ExportFormat = 'png' | 'jpeg' | 'webp';
 type ExportBackgroundMode = 'transparent' | 'solid';
+type BackgroundRemovalStatus = 'idle' | 'running' | 'error';
 type BackgroundRemovalPreview = {
   layerId: string;
   maskId: string;
@@ -208,6 +210,7 @@ export default function App() {
   // Onboarding Modal Visibility
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showBackgroundTemplatesModal, setShowBackgroundTemplatesModal] = useState(false);
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
@@ -230,6 +233,12 @@ export default function App() {
   const selectionClipboardRef = useRef<HTMLCanvasElement | null>(null);
   const [hasSelectionClipboard, setHasSelectionClipboard] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
+  const [backgroundRemovalStatus, setBackgroundRemovalStatus] = useState<BackgroundRemovalStatus>('idle');
+  const [backgroundRemovalLayerId, setBackgroundRemovalLayerId] = useState<string | null>(null);
+  const [backgroundRemovalError, setBackgroundRemovalError] = useState<string | null>(null);
+  const backgroundRemovalOperationRef = useRef<string | null>(null);
+
+  const isRemovingBackground = backgroundRemovalStatus === 'running';
 
   // Load onboarding on first visit based on localStorage
   useEffect(() => {
@@ -666,6 +675,50 @@ export default function App() {
     }
   };
 
+  const handleAddBackgroundTemplate = (template: BackgroundTemplate) => {
+    setShowBackgroundTemplatesModal(false);
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const sourceId = createLayerId('src');
+      
+      // If project is blank/empty, initialize canvas size
+      if (canvasWidth === 0 || canvasHeight === 0) {
+        setCanvasWidth(img.naturalWidth);
+        setCanvasHeight(img.naturalHeight);
+      }
+      
+      const newCanvas = bitmapStoreRef.current.createBlank(sourceId, img.naturalWidth, img.naturalHeight);
+      const ctx = newCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+      }
+
+      const newId = createLayerId('img');
+      const newLayer: EditorLayer = {
+        id: newId,
+        name: template.name,
+        type: 'image',
+        visible: true,
+        opacity: 1,
+        sourceId,
+        transform: getDefaultTransform(),
+        adjustments: makeDefaultAdjustments(),
+        filter: 'none'
+      };
+
+      // Add as background (index 0)
+      const nextStack = [newLayer, ...layers];
+      setLayers(nextStack);
+      latestLayersRef.current = nextStack;
+      setActiveLayerId(newId);
+      
+      saveHistoryCommand('layer:add', 'Add background template', nextStack, canvasWidth || img.naturalWidth, canvasHeight || img.naturalHeight, newId);
+    };
+    img.src = template.url;
+  };
+
   // Manage Active layer select
   const handleSelectLayer = (id: string) => {
     setActiveLayerId(id);
@@ -864,7 +917,7 @@ export default function App() {
     saveHistoryCommand('layer:mask', 'Add layer mask', nextStack, canvasWidth, canvasHeight, id, [maskId]);
   };
 
-  const handlePreviewRemoveBackground = (id: string) => {
+  const handlePreviewRemoveBackground = async (id: string) => {
     const target = layers.find(layer => layer.id === id);
     if (!target || (target.type !== 'image' && target.type !== 'drawing')) {
       setUploadError('Remove background works on image and drawing layers.');
@@ -881,24 +934,64 @@ export default function App() {
       return;
     }
 
-    const maskId = createLayerId('mask');
-    const mask = createBackgroundRemovalMask(source);
-    bitmapStoreRef.current.setCanvas(maskId, mask);
+    // Generate a unique operation token for stale-operation protection
+    const operationId = crypto.randomUUID();
+    backgroundRemovalOperationRef.current = operationId;
+    const operationLayerId = id;
+    const sourceWidth = source.width;
+    const sourceHeight = source.height;
 
-    const preview = cloneCanvas(source);
-    const previewCtx = preview.getContext('2d');
-    if (previewCtx) {
-      previewCtx.globalCompositeOperation = 'destination-in';
-      previewCtx.drawImage(mask, 0, 0, preview.width, preview.height);
-      previewCtx.globalCompositeOperation = 'source-over';
-    }
-
+    setBackgroundRemovalStatus('running');
+    setBackgroundRemovalLayerId(id);
+    setBackgroundRemovalError(null);
     setUploadError('');
-    setBackgroundRemovalPreview({
-      layerId: id,
-      maskId,
-      previewUrl: preview.toDataURL('image/png')
-    });
+
+    try {
+      const maskId = createLayerId('mask');
+      const mask = await createBackgroundRemovalMask(source);
+
+      // Stale-operation guard: verify nothing changed while we awaited
+      const latestTarget = latestLayersRef.current.find(layer => layer.id === operationLayerId);
+      const latestSource = latestTarget
+        ? bitmapStoreRef.current.getCanvas(latestTarget.sourceId)
+        : null;
+
+      if (
+        backgroundRemovalOperationRef.current !== operationId ||
+        !latestTarget ||
+        latestTarget.mask ||
+        !latestSource ||
+        latestSource.width !== sourceWidth ||
+        latestSource.height !== sourceHeight
+      ) {
+        // Operation is stale — discard result silently
+        return;
+      }
+
+      bitmapStoreRef.current.setCanvas(maskId, mask);
+
+      const preview = cloneCanvas(source);
+      const previewCtx = preview.getContext('2d');
+      if (previewCtx) {
+        previewCtx.globalCompositeOperation = 'destination-in';
+        previewCtx.drawImage(mask, 0, 0, preview.width, preview.height);
+        previewCtx.globalCompositeOperation = 'source-over';
+      }
+
+      setBackgroundRemovalPreview({
+        layerId: id,
+        maskId,
+        previewUrl: preview.toDataURL('image/png')
+      });
+    } catch {
+      setBackgroundRemovalError(
+        'Remove background failed: AI model could not process this image.'
+      );
+      setBackgroundRemovalStatus('error');
+    } finally {
+      setBackgroundRemovalStatus(prev => prev === 'running' ? 'idle' : prev);
+      setBackgroundRemovalLayerId(null);
+    }
   };
 
   const handleCancelRemoveBackground = () => {
@@ -909,6 +1002,7 @@ export default function App() {
   };
 
   const handleApplyRemoveBackground = () => {
+    if (isRemovingBackground) return;
     if (!backgroundRemovalPreview) return;
     const { layerId, maskId } = backgroundRemovalPreview;
     const target = layers.find(layer => layer.id === layerId);
@@ -1181,6 +1275,17 @@ export default function App() {
       return;
     }
 
+    if (activeTool === 'eraser') {
+      if (!activeLayer || !activeLayer.visible || (activeLayer.type !== 'image' && activeLayer.type !== 'drawing')) {
+        setUploadError('Eraser works on visible image or drawing layers.');
+        return;
+      }
+      currentDrawStrokeLayerIdRef.current = activeLayer.id;
+      activePixelEditBeforeRef.current = createPixelEditBeforeCheckpoint('Before eraser stroke', layers, canvasWidth, canvasHeight, activeLayer.id);
+      setUploadError('');
+      return;
+    }
+
     if (!activeLayer || activeLayer.type !== 'drawing') {
       // Find compile existing drawing layer first
       const existingDrawing = layers.find(l => l.type === 'drawing');
@@ -1238,7 +1343,11 @@ export default function App() {
     }
     
     // Fallback if somehow not caught in handleDrawStart
-    if (!isEditingMask && (!activeLayer || activeLayer.type !== 'drawing')) {
+    if (!isEditingMask && isEraser && (!activeLayer || !activeLayer.visible || (activeLayer.type !== 'image' && activeLayer.type !== 'drawing'))) {
+      return;
+    }
+
+    if (!isEditingMask && !isEraser && (!activeLayer || activeLayer.type !== 'drawing')) {
       const sourceId = createLayerId('src');
       bitmapStoreRef.current.createBlank(sourceId, canvasWidth, canvasHeight);
       
@@ -1310,7 +1419,7 @@ export default function App() {
       canvasWidth,
       canvasHeight,
       finalLayersId,
-      activeTool === 'cloneStamp' ? 'Clone stamp stroke' : activeTool === 'healingBrush' ? 'Healing brush stroke' : activeMaskLayerId ? 'Mask stroke' : 'Brush stroke',
+      activeTool === 'cloneStamp' ? 'Clone stamp stroke' : activeTool === 'healingBrush' ? 'Healing brush stroke' : activeTool === 'eraser' ? 'Eraser stroke' : activeMaskLayerId ? 'Mask stroke' : 'Brush stroke',
       activePixelEditBeforeRef.current
     );
     currentDrawStrokeLayerIdRef.current = null;
@@ -2041,8 +2150,8 @@ export default function App() {
       setCropRect(null);
     }
 
-    // Auto-select or auto-create a drawing layer for brush/eraser
-    if ((tool === 'brush' || tool === 'eraser') && canvasWidth > 0 && !activeMaskLayerId) {
+    // Auto-select or auto-create a drawing layer for brush
+    if (tool === 'brush' && canvasWidth > 0 && !activeMaskLayerId) {
       const activeLayer = layers.find(l => l.id === activeLayerId);
       if (!activeLayer || activeLayer.type !== 'drawing') {
         const existingDrawing = layers.find(l => l.type === 'drawing');
@@ -2480,7 +2589,7 @@ export default function App() {
       />
 
       {/* Main Grid Area Layout - strictly fit on a single screen without scrolling on desktop */}
-      <main className="flex-1 w-full mx-auto grid grid-cols-1 lg:grid gap-3.5 lg:overflow-hidden min-h-0" style={gridStyle} id="editor-core-grid">
+      <main className="flex-1 w-full mx-auto grid grid-cols-1 lg:grid grid-rows-[minmax(0,1fr)] gap-3.5 lg:overflow-hidden min-h-0" style={gridStyle} id="editor-core-grid">
         {/* Left column: ToolRail */}
         {leftSidebarVisible && (
           <div id="left-sidebar-col" className="h-full flex shrink-0">
@@ -2579,9 +2688,12 @@ export default function App() {
                   hasSelection={Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight))}
                   onAddLayerMask={handleAddLayerMask}
                   onRemoveBackground={handlePreviewRemoveBackground}
+                  isRemovingBackground={isRemovingBackground}
+                  removingBackgroundLayerId={backgroundRemovalLayerId}
                   onToggleLayerMask={handleToggleLayerMask}
                   onDeleteLayerMask={handleDeleteLayerMask}
                   onSelectLayerMask={handleSelectLayerMask}
+                  onAddBackgroundTemplate={() => setShowBackgroundTemplatesModal(true)}
                 />
               ) : (
                 <>
@@ -2678,9 +2790,12 @@ export default function App() {
                       hasSelection={Boolean(getSelectionBounds(selection, canvasWidth, canvasHeight))}
                       onAddLayerMask={handleAddLayerMask}
                       onRemoveBackground={handlePreviewRemoveBackground}
+                      isRemovingBackground={isRemovingBackground}
+                      removingBackgroundLayerId={backgroundRemovalLayerId}
                       onToggleLayerMask={handleToggleLayerMask}
                       onDeleteLayerMask={handleDeleteLayerMask}
                       onSelectLayerMask={handleSelectLayerMask}
+                      onAddBackgroundTemplate={() => setShowBackgroundTemplatesModal(true)}
                     />
                   </div>
                 </>
@@ -2689,11 +2804,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* Footer copyright */}
-      <footer className="bg-black border-t border-zinc-900 py-1 text-center text-[10px] text-zinc-500 select-none font-sans" id="editor-footer-credits">
-        Designed for absolute beginners. Your artwork remains fully private inside your browser.
-      </footer>
 
       <input
         ref={projectFileInputRef}
@@ -2710,6 +2820,16 @@ export default function App() {
           className="fixed left-1/2 bottom-8 -translate-x-1/2 z-50 max-w-sm rounded-2xl border border-red-800 bg-red-950 px-4 py-3 text-xs font-semibold text-red-100 shadow-2xl"
         >
           {uploadError}
+        </div>
+      )}
+
+      {backgroundRemovalError && (
+        <div
+          role="alert"
+          className="fixed left-1/2 bottom-20 -translate-x-1/2 z-50 max-w-sm rounded-2xl border border-red-800 bg-red-950 px-4 py-3 text-xs font-semibold text-red-100 shadow-2xl"
+          onClick={() => setBackgroundRemovalError(null)}
+        >
+          {backgroundRemovalError}
         </div>
       )}
 
@@ -2943,6 +3063,13 @@ export default function App() {
         <Onboarding
           onClose={handleOnboardingClose}
           onSelectSample={handleSelectSampleProject}
+        />
+      )}
+
+      {showBackgroundTemplatesModal && (
+        <BackgroundTemplates
+          onClose={() => setShowBackgroundTemplatesModal(false)}
+          onSelectTemplate={handleAddBackgroundTemplate}
         />
       )}
 

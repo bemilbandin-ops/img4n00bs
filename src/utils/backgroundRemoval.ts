@@ -1,3 +1,4 @@
+import { removeBackground } from '@imgly/background-removal';
 import { createCanvas } from './bitmapStore';
 
 type Rgb = [number, number, number];
@@ -12,13 +13,19 @@ interface Cluster {
   tolerance: number;
 }
 
-export interface BackgroundRemovalOptions {
+export interface HeuristicBackgroundRemovalOptions {
   /** Base color tolerance for edge-connected background matching. */
   threshold?: number;
   /** Softens the generated alpha mask. */
   featherRadius?: number;
   /** Maximum edge color clusters treated as possible background. */
   clusterCount?: number;
+}
+
+/** Options for the async IMG.LY background removal path. */
+export interface ImglyBackgroundRemovalOptions {
+  /** Reserved for future IMG.LY config overrides. */
+  provider?: 'imgly';
 }
 
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
@@ -255,9 +262,105 @@ const fillTinyForegroundIslands = (alpha: Uint8ClampedArray, width: number, heig
   return alpha;
 };
 
-export function createBackgroundRemovalMask(
+// ---------------------------------------------------------------------------
+// Canvas ↔ Blob helpers (no DOM queries — pure canvas API)
+// ---------------------------------------------------------------------------
+
+const canvasToBlob = (
+  canvas: HTMLCanvasElement,
+  type = 'image/png'
+): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (!blob) {
+        reject(new Error('Background removal failed: could not encode source canvas.'));
+        return;
+      }
+      resolve(blob);
+    }, type);
+  });
+
+// ---------------------------------------------------------------------------
+// Async IMG.LY AI background removal
+// ---------------------------------------------------------------------------
+
+/** Signature matching the IMG.LY `removeBackground` function for DI in tests. */
+export type RemoveBackgroundFn = (image: Blob, config?: { output?: { format?: string } }) => Promise<Blob>;
+
+/**
+ * Creates a white-RGB mask canvas whose alpha channel represents the
+ * foreground detected by the IMG.LY AI model.
+ *
+ * The returned Promise resolves to a canvas of the same dimensions as `source`.
+ * Errors from the IMG.LY model propagate — no silent heuristic fallback.
+ *
+ * @param removeBackgroundFn  Injectable for tests; defaults to the real IMG.LY export.
+ */
+export async function createBackgroundRemovalMask(
   source: HTMLCanvasElement,
-  { threshold = 42, featherRadius = 1, clusterCount = 7 }: BackgroundRemovalOptions = {}
+  _options: ImglyBackgroundRemovalOptions = {},
+  removeBackgroundFn: RemoveBackgroundFn = removeBackground as RemoveBackgroundFn
+): Promise<HTMLCanvasElement> {
+  const { width, height } = source;
+  if (width === 0 || height === 0) {
+    throw new Error('Background removal failed: source canvas has zero dimensions.');
+  }
+
+  // 1. Convert source to Blob
+  const sourceBlob = await canvasToBlob(source, 'image/png');
+
+  // 2. Run IMG.LY model
+  const resultBlob = await removeBackgroundFn(sourceBlob, {
+    output: { format: 'image/png' }
+  });
+
+  // 3. Decode the returned cutout PNG
+  const bitmap = await createImageBitmap(resultBlob);
+
+  // 4. Draw cutout to a temporary canvas to read pixel data
+  const cutoutCanvas = createCanvas(width, height);
+  const cutoutCtx = cutoutCanvas.getContext('2d');
+  if (!cutoutCtx) {
+    throw new Error('Background removal failed: could not create cutout canvas context.');
+  }
+  cutoutCtx.drawImage(bitmap, 0, 0, width, height);
+
+  // 5. Extract alpha channel from cutout and build a white mask
+  const cutoutImageData = cutoutCtx.getImageData(0, 0, width, height);
+  const maskImageData = new ImageData(width, height);
+
+  for (let i = 0; i < width * height; i++) {
+    const offset = i * 4;
+    const alpha = cutoutImageData.data[offset + 3];
+
+    maskImageData.data[offset] = 255;
+    maskImageData.data[offset + 1] = 255;
+    maskImageData.data[offset + 2] = 255;
+    maskImageData.data[offset + 3] = alpha;
+  }
+
+  // 6. Write mask and return
+  const mask = createCanvas(width, height);
+  const maskCtx = mask.getContext('2d');
+  if (!maskCtx) {
+    throw new Error('Background removal failed: could not create mask canvas context.');
+  }
+  maskCtx.putImageData(maskImageData, 0, 0);
+  return mask;
+}
+
+// ---------------------------------------------------------------------------
+// Synchronous heuristic fallback (explicit, never called automatically)
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a background-removal mask using edge-color heuristics.
+ * This is the original synchronous implementation — kept as an explicit
+ * fallback that the caller must choose deliberately.
+ */
+export function createHeuristicBackgroundRemovalMask(
+  source: HTMLCanvasElement,
+  { threshold = 42, featherRadius = 1, clusterCount = 7 }: HeuristicBackgroundRemovalOptions = {}
 ) {
   const mask = createCanvas(source.width, source.height);
   const sourceCtx = source.getContext('2d');

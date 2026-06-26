@@ -90,10 +90,10 @@ export default function ToolRail({ activeTool, onChangeTool }: ToolRailProps) {
 
   return (
     <div 
-      className="w-[84px] h-full bg-zinc-950 border border-zinc-900 rounded-2xl flex flex-col items-center py-4 gap-2 shadow-xl shrink-0 z-30" 
+      className="ui-panel w-[92px] h-full border rounded-2xl flex flex-col items-center py-4 gap-3 shadow-xl shrink-0 z-30" 
       id="editor-tool-rail"
     >
-      <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider font-mono mb-2">Tools</div>
+      <div className="text-xs uppercase font-bold text-text-secondary tracking-wider font-mono mb-1">Tools</div>
       <div className="flex flex-col gap-2 w-full px-2 overflow-y-auto" id="tool-rail-buttons">
         {tools.map((t) => (
           <button
@@ -108,18 +108,18 @@ export default function ToolRail({ activeTool, onChangeTool }: ToolRailProps) {
                 onChangeTool(t.id);
               }
             }}
-            className={`w-full aspect-square flex flex-col items-center justify-center p-1 rounded-xl transition-all border cursor-pointer select-none gap-1 ${
+            className={`w-full aspect-square flex flex-col items-center justify-center p-1.5 rounded-xl transition-all border cursor-pointer select-none gap-1 ${
               t.active 
                 ? 'bg-white text-black border-white shadow-lg scale-[1.03]' 
-                : 'bg-zinc-900/40 text-zinc-400 border-transparent hover:bg-zinc-900 hover:text-white hover:border-zinc-800'
+                : 'bg-zinc-900/40 text-text-secondary border-transparent hover:bg-zinc-900 hover:text-text-primary hover:border-panel-border'
             }`}
             id={`btn-select-tool-${t.id}`}
             title={t.label}
           >
-            <div className={`p-1.5 rounded-lg ${t.active ? 'bg-zinc-100 text-black' : 'bg-black text-zinc-400'}`}>
+            <div className={`p-1.5 rounded-lg ${t.active ? 'bg-zinc-100 text-black' : 'bg-black text-text-secondary'}`}>
               {t.icon}
             </div>
-            <span className="text-[11px] font-semibold tracking-wide">{t.label}</span>
+            <span className="text-xs font-semibold tracking-wide">{t.label}</span>
           </button>
         ))}
       </div>

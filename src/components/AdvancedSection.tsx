@@ -20,22 +20,22 @@ export default function AdvancedSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border border-zinc-900 rounded-xl overflow-hidden bg-zinc-950/40">
+    <div className="ui-card border rounded-xl overflow-hidden">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 text-xs font-bold text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer select-none"
+        className="w-full flex items-center justify-between p-3.5 text-[13px] font-bold text-text-secondary hover:text-text-primary hover:bg-zinc-900 transition-colors cursor-pointer select-none"
         aria-expanded={isOpen}
       >
         <span>{title}</span>
         {isOpen ? (
-          <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
+          <ChevronUp className="w-3.5 h-3.5 text-text-secondary" />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+          <ChevronDown className="w-3.5 h-3.5 text-text-secondary" />
         )}
       </button>
       {isOpen && (
-        <div className="p-3 border-t border-zinc-900 flex flex-col gap-3.5 bg-black/40">
+        <div className="p-4 border-t border-panel-border flex flex-col gap-4 bg-black/30">
           {children}
         </div>
       )}

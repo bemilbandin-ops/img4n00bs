@@ -169,7 +169,7 @@ export default function Toolbar({
 }: ToolbarProps) {
 
   return (
-    <div className="w-full bg-black border border-zinc-900 rounded-2xl p-3 flex flex-col gap-2.5 shadow-xl shrink-0" id="editor-left-toolbar">
+    <div className="w-full bg-black border border-panel-border rounded-2xl p-3 flex flex-col gap-3 shadow-xl shrink-0" id="editor-left-toolbar">
       {/* Title / App Brand with Small Logo (Sleek Compact Sidebar Header) */}
       <div className="flex items-center justify-between border-b border-zinc-900 pb-2" id="toolbar-header">
         <div className="flex items-center gap-2" id="toolbar-small-logo">
@@ -177,8 +177,8 @@ export default function Toolbar({
             🪄
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] uppercase tracking-widest text-zinc-500 font-bold font-mono leading-none">My Magic Desk</span>
-            <h1 className="text-xs font-bold text-white tracking-tight font-sans mt-0.5 leading-none">Beginner Editor</h1>
+            <span className="text-xs uppercase tracking-wider text-text-secondary font-bold font-mono leading-none">My Magic Desk</span>
+            <h1 className="text-[15px] font-bold text-text-primary tracking-tight font-sans mt-0.5 leading-none">Beginner Editor</h1>
           </div>
         </div>
 
@@ -248,12 +248,12 @@ export default function Toolbar({
       </div>
 
       <div className="flex flex-col gap-2" id="toolbar-tools-list">
-        <div className="text-[8px] uppercase font-bold text-zinc-500 tracking-wider font-mono">Pick what you want to do</div>
+        <div className="text-xs uppercase font-bold text-text-secondary tracking-wider font-mono">Pick what you want to do</div>
         {toolbarToolGroups.map((group) => (
           <div key={group.title} className="flex flex-col gap-1" id={`tool-group-${group.title.toLowerCase().replaceAll(' ', '-')}`}>
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-[10px] font-extrabold text-white leading-none">{group.title}</h2>
-              <span className="text-[8px] text-zinc-500 truncate">{group.note}</span>
+              <h2 className="text-[15px] font-semibold text-text-primary leading-tight">{group.title}</h2>
+              <span className="text-xs text-text-secondary truncate">{group.note}</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5" id={`tools-grid-${group.title.toLowerCase().replaceAll(' ', '-')}`}>
               {group.tools.map((t) => {
@@ -263,7 +263,7 @@ export default function Toolbar({
                     <button
                       type="button"
                       onClick={() => onChangeTool(t.id)}
-                      className={`w-full min-h-12 flex items-center gap-1.5 p-1.5 rounded-lg transition-all text-left border cursor-pointer select-none ${
+                      className={`w-full min-h-14 flex items-center gap-2 p-2 rounded-lg transition-all text-left border cursor-pointer select-none ${
                         isActive 
                           ? 'bg-white text-black border-white font-bold' 
                           : 'bg-zinc-900/60 text-zinc-300 border-transparent hover:bg-zinc-900 hover:text-white hover:border-zinc-800'
@@ -274,8 +274,8 @@ export default function Toolbar({
                         {t.icon}
                       </div>
                       <span className="min-w-0">
-                        <span className="block text-[11px] font-bold leading-tight truncate">{t.label}</span>
-                        <span className={`block text-[8px] leading-tight truncate ${isActive ? 'text-zinc-700' : 'text-zinc-500'}`}>{t.subtitle}</span>
+                        <span className="block text-[13px] font-bold leading-tight truncate">{t.label}</span>
+                        <span className={`block text-xs leading-tight truncate ${isActive ? 'text-zinc-700' : 'text-text-secondary'}`}>{t.subtitle}</span>
                       </span>
                     </button>
 
@@ -283,7 +283,7 @@ export default function Toolbar({
                       <div className="font-bold flex items-center gap-1.5 text-white" id={`tooltip-title-${t.id}`}>
                         {t.icon} {t.label}
                       </div>
-                      <div className="text-[10px] text-zinc-305 leading-normal mt-0.5" id={`tooltip-desc-${t.id}`}>
+                      <div className="text-xs text-text-secondary leading-relaxed mt-0.5" id={`tooltip-desc-${t.id}`}>
                         {t.desc}
                       </div>
                       <div className="absolute right-full top-1/2 -translate-y-1/2 border-y-6 border-y-transparent border-r-6 border-r-black" id={`tooltip-arrow-${t.id}`} />
@@ -302,7 +302,7 @@ export default function Toolbar({
           <button
             type="button"
             onClick={onSaveProject}
-            className="w-full flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-2 rounded-lg font-bold text-[11px] shadow transition cursor-pointer border border-zinc-800"
+            className="ui-secondary-button w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg font-bold text-xs shadow transition cursor-pointer border"
             id="btn-save-layered-project"
             title="Save editable layered project"
           >
@@ -311,7 +311,7 @@ export default function Toolbar({
           <button
             type="button"
             onClick={onOpenProject}
-            className="w-full flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-2 rounded-lg font-bold text-[11px] shadow transition cursor-pointer border border-zinc-800"
+            className="ui-secondary-button w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg font-bold text-xs shadow transition cursor-pointer border"
             id="btn-open-layered-project"
             title="Open editable layered project"
           >
@@ -321,7 +321,7 @@ export default function Toolbar({
         <button
           type="button"
           onClick={onResizeProject}
-          className="w-full flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-2 rounded-lg font-bold text-[11px] shadow transition cursor-pointer border border-zinc-800"
+          className="ui-secondary-button w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg font-bold text-xs shadow transition cursor-pointer border"
           id="btn-open-resize-dialog"
           title="Resize image pixels or canvas bounds"
         >
@@ -330,7 +330,7 @@ export default function Toolbar({
         <button
           type="button"
           onClick={onExport}
-          className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-200 text-black py-1.5 px-3 rounded-lg font-bold text-xs shadow transition cursor-pointer"
+          className="ui-primary-button w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg font-bold text-[13px] shadow transition cursor-pointer border"
           id="btn-main-export"
         >
           <Download className="w-3.5 h-3.5" /> Save Picture

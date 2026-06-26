@@ -53,7 +53,7 @@ export default function TopBar({
 }: TopBarProps) {
   return (
     <header 
-      className="w-full bg-zinc-950 border border-zinc-900 rounded-2xl p-3 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xl shrink-0 z-40"
+      className="ui-panel w-full border rounded-2xl p-3 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xl shrink-0 z-40"
       id="editor-top-bar"
     >
       {/* Left Section: Brand Logo & Title */}
@@ -62,10 +62,10 @@ export default function TopBar({
           🪄
         </div>
         <div className="flex flex-col">
-          <h1 className="text-sm font-extrabold text-white tracking-tight font-display leading-none">Img4n00bs</h1>
+          <h1 className="text-[15px] font-extrabold text-text-primary tracking-tight font-display leading-none">Img4n00bs</h1>
         </div>
         {canvasWidth > 0 && (
-          <div className="hidden sm:inline-flex ml-2 px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono text-zinc-400">
+          <div className="hidden sm:inline-flex ml-2 px-2 py-0.5 bg-zinc-900 border border-panel-border rounded-lg text-xs font-mono text-text-secondary">
             {canvasWidth} × {canvasHeight}px
           </div>
         )}
@@ -134,7 +134,7 @@ export default function TopBar({
         <button
           type="button"
           onClick={onOpenProject}
-          className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-3 rounded-xl font-semibold text-xs shadow-sm transition active:scale-95 cursor-pointer border border-zinc-800"
+          className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
           id="btn-topbar-open-project"
           title="Open layered project file (.n00bs)"
         >
@@ -144,7 +144,7 @@ export default function TopBar({
         <button
           type="button"
           onClick={onSaveProject}
-          className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-3 rounded-xl font-semibold text-xs shadow-sm transition active:scale-95 cursor-pointer border border-zinc-800"
+          className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
           id="btn-save-layered-project"
           title="Save layered project file (.n00bs)"
         >
@@ -155,7 +155,7 @@ export default function TopBar({
         <button
           type="button"
           onClick={onResizeProject}
-          className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 py-1.5 px-3 rounded-xl font-semibold text-xs shadow-sm transition active:scale-95 cursor-pointer border border-zinc-800"
+          className="ui-secondary-button flex items-center gap-1.5 py-2 px-3 rounded-xl font-semibold text-[13px] shadow-sm transition active:scale-95 cursor-pointer border"
           id="btn-topbar-resize"
           title="Resize canvas or pixel scale"
         >
@@ -166,7 +166,7 @@ export default function TopBar({
         <button
           type="button"
           onClick={onExport}
-          className="flex items-center gap-1.5 bg-white hover:bg-zinc-200 text-black py-1.5 px-3.5 rounded-xl font-bold text-xs shadow transition active:scale-95 cursor-pointer"
+          className="ui-primary-button flex items-center gap-1.5 py-2.5 px-3.5 rounded-xl font-bold text-[13px] shadow transition active:scale-95 cursor-pointer border"
           id="btn-main-export"
           title="Export flattened picture (PNG/JPG/WebP)"
         >

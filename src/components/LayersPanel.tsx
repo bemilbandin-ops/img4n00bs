@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { EditorLayer } from '../types';
 import AdvancedSection from './AdvancedSection';
+import { ImageIcon as ImageIcon2 } from 'lucide-react'; // to avoid conflict if needed, or just use ImageIcon
 
 interface LayersPanelProps {
   layers: EditorLayer[];
@@ -39,10 +40,13 @@ interface LayersPanelProps {
   activeMaskLayerId: string | null;
   hasSelection: boolean;
   onAddLayerMask: (id: string, mode: 'reveal' | 'hide' | 'selection') => void;
-  onRemoveBackground: (id: string) => void;
+  onRemoveBackground: (id: string) => void | Promise<void>;
+  isRemovingBackground: boolean;
+  removingBackgroundLayerId: string | null;
   onToggleLayerMask: (id: string) => void;
   onDeleteLayerMask: (id: string) => void;
   onSelectLayerMask: (id: string) => void;
+  onAddBackgroundTemplate: () => void;
 }
 
 export default function LayersPanel({
@@ -63,9 +67,12 @@ export default function LayersPanel({
   hasSelection,
   onAddLayerMask,
   onRemoveBackground,
+  isRemovingBackground,
+  removingBackgroundLayerId,
   onToggleLayerMask,
   onDeleteLayerMask,
-  onSelectLayerMask
+  onSelectLayerMask,
+  onAddBackgroundTemplate
 }: LayersPanelProps) {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
@@ -93,13 +100,13 @@ export default function LayersPanel({
   };
 
   return (
-    <div className="w-full h-full flex flex-col gap-3.5 bg-zinc-950/40 rounded-xl border border-zinc-900/60 p-4 overflow-y-auto" id="editor-layers-panel">
+    <div className="ui-panel w-full h-full flex flex-col gap-4 rounded-xl border p-4 overflow-y-auto" id="editor-layers-panel">
       {/* Title & Add Action */}
       <div className="flex items-center justify-between border-b border-zinc-900 pb-3" id="layers-panel-header">
         <div className="flex items-center gap-1.5" id="layers-title-box">
-          <Layers className="w-4 h-4 text-zinc-400" />
-          <h2 className="text-sm font-bold text-white tracking-tight">Layers List</h2>
-          <span className="bg-zinc-900 text-zinc-400 px-2 py-0.5 rounded-full text-[10px] font-mono border border-zinc-800 ml-1">
+          <Layers className="w-4 h-4 text-text-secondary" />
+          <h2 className="ui-section-title tracking-tight">Layers List</h2>
+          <span className="bg-zinc-900 text-text-secondary px-2 py-0.5 rounded-full text-xs font-mono border border-zinc-800 ml-1">
             {layers.length}
           </span>
         </div>
@@ -109,7 +116,7 @@ export default function LayersPanel({
           <button
             type="button"
             onClick={() => setShowAddMenu(!showAddMenu)}
-            className="flex items-center gap-1 bg-white hover:bg-zinc-200 text-black font-bold py-1.5 px-3 rounded-xl text-xs transition active:scale-95 cursor-pointer border border-white"
+            className="ui-primary-button flex items-center gap-1 font-bold py-2 px-3 rounded-xl text-[13px] transition active:scale-95 cursor-pointer border"
             id="btn-add-layer-dropdown"
           >
             <Plus className="w-3.5 h-3.5" /> Add Layer
@@ -168,6 +175,19 @@ export default function LayersPanel({
                 <ImageIcon className="w-3.5 h-3.5 text-zinc-400" />
                 <span>+ Image Layer</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onAddBackgroundTemplate();
+                  setShowAddMenu(false);
+                }}
+                className="flex items-center gap-2.5 p-2 px-3 text-xs text-left text-zinc-300 hover:bg-zinc-900 hover:text-white rounded-lg border-t border-zinc-800 transition cursor-pointer"
+                id="btn-add-background-template"
+              >
+                <ImageIcon2 className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-purple-400 font-medium">+ Background Template</span>
+              </button>
             </div>
           )}
           <input
@@ -184,7 +204,7 @@ export default function LayersPanel({
       {/* Layer List Space */}
       <div className="flex flex-col gap-2 flex-1 min-h-0" id="layers-stack-list">
         {layers.length === 0 ? (
-          <div className="py-8 text-center text-xs text-zinc-500 font-sans flex flex-col items-center justify-center h-full gap-2" id="empty-layers-display">
+          <div className="py-8 text-center ui-helper font-sans flex flex-col items-center justify-center h-full gap-2" id="empty-layers-display">
             <ImageIcon className="w-8 h-8 opacity-25" />
             <span>No layers in this project.<br/>Add a layer to start editing.</span>
           </div>
@@ -212,8 +232,8 @@ export default function LayersPanel({
                 key={layer.id}
                 className={`flex flex-col gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-zinc-900/40 border-zinc-800 text-white shadow-md'
-                    : 'bg-black/20 border-zinc-900/60 text-zinc-400 hover:border-zinc-800/60'
+                    ? 'ui-card border-panel-border text-text-primary shadow-md'
+                    : 'bg-black/20 border-zinc-900/60 text-text-secondary hover:border-panel-border'
                 }`}
                 onClick={() => {
                   if (!isActive) onSelectLayer(layer.id);
@@ -256,11 +276,11 @@ export default function LayersPanel({
                           id={`input-rename-layer-${layer.id}`}
                         />
                       ) : (
-                        <span className="text-xs font-semibold text-white truncate">
+                        <span className="text-[13px] font-semibold text-text-primary truncate">
                           {layer.name}
                         </span>
                       )}
-                      <span className="text-[10px] text-zinc-500 font-medium">
+                      <span className="ui-helper font-medium">
                         {layerTypeLabel} Layer
                       </span>
                     </div>
@@ -509,10 +529,17 @@ export default function LayersPanel({
                                 e.stopPropagation();
                                 onRemoveBackground(layer.id);
                               }}
-                              className="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-semibold py-1.5 rounded text-xs transition cursor-pointer"
+                              disabled={isRemovingBackground}
+                              className={`w-full bg-zinc-900 border border-zinc-800 text-white font-semibold py-1.5 rounded text-xs transition cursor-pointer ${
+                                isRemovingBackground
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:border-zinc-700'
+                              }`}
                               id={`btn-remove-background-${layer.id}`}
                             >
-                              Remove Background
+                              {isRemovingBackground && removingBackgroundLayerId === layer.id
+                                ? 'Removing…'
+                                : 'Remove Background'}
                             </button>
                           </div>
                         )}

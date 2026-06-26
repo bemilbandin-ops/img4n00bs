@@ -95,6 +95,38 @@ test('sidebars collapse independently and expand the canvas stage', async ({ pag
   await expect(page.locator('#left-sidebar-col')).toBeHidden();
 });
 
+test('eraser keeps the selected image layer instead of creating a drawing layer', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({
+    name: 'eraser-fixture.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="red"/></svg>')
+  });
+  await expect(page.locator('#layers-stack-list').getByText('eraser-fixture')).toBeVisible();
+
+  await page.locator('#btn-select-tool-eraser').click();
+
+  const opaquePoint = { x: 50, y: 50 };
+  const beforeAlpha = await page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement, point) => {
+    return canvas.getContext('2d')!.getImageData(point!.x, point!.y, 1, 1).data[3];
+  }, opaquePoint);
+  const box = await artboard(page).boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + opaquePoint!.x, box!.y + opaquePoint!.y);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + opaquePoint!.x + 20, box!.y + opaquePoint!.y + 20);
+  await page.mouse.up();
+
+  await expect(page.locator('#layers-stack-list').getByText(/Drawing Layer/)).toHaveCount(0);
+  await expect(page.locator('#layers-stack-list [id^="layer-card-"]').filter({ hasText: 'eraser-fixture' })).toHaveClass(/text-white/);
+  await expect.poll(async () => {
+    return page.locator('#active-drawing-canvas-element').evaluate((canvas: HTMLCanvasElement, point) => {
+      return canvas.getContext('2d')!.getImageData(point!.x, point!.y, 1, 1).data[3];
+    }, opaquePoint);
+  }).toBeLessThan(beforeAlpha);
+});
+
 test('main editor workflow round-trips project and exports png', async ({ page }, testInfo) => {
   console.log('goto');
   await page.goto('/');
@@ -171,6 +203,7 @@ test('main editor workflow round-trips project and exports png', async ({ page }
   await page.keyboard.down('Alt');
   await page.mouse.click(boxAfterOpen!.x + 20, boxAfterOpen!.y + 20);
   await page.keyboard.up('Alt');
+  await expect(page.locator('#tool-basic-controls')).toContainText('Set (');
   await page.mouse.move(boxAfterOpen!.x + 30, boxAfterOpen!.y + 30);
   await page.mouse.down();
   await page.mouse.move(boxAfterOpen!.x + 40, boxAfterOpen!.y + 40);

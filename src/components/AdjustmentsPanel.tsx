@@ -103,11 +103,11 @@ export default function AdjustmentsPanel({
   ];
 
   return (
-    <div className="w-full flex flex-col gap-4 text-zinc-300" id="editor-adjustments-panel">
+    <div className="w-full flex flex-col gap-5 text-text-primary" id="editor-adjustments-panel">
       {/* Target layer heading info */}
-      <div className="bg-zinc-900/30 border border-zinc-900 p-3 rounded-xl flex flex-col gap-1 shrink-0" id="adjust-panel-header">
-        <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider font-mono">Current Layer</span>
-        <h2 className="text-sm font-semibold text-white truncate" title={activeLayerName}>
+      <div className="ui-card border p-4 rounded-xl flex flex-col gap-1.5 shrink-0" id="adjust-panel-header">
+        <span className="ui-helper uppercase font-bold tracking-wider font-mono">Current Layer</span>
+        <h2 className="ui-section-title truncate" title={activeLayerName}>
           {activeLayerName}
         </h2>
       </div>
@@ -115,12 +115,12 @@ export default function AdjustmentsPanel({
       {/* Core/Simple Controls */}
       <div className="flex flex-col gap-4" id="adjustments-simple-group">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wide">Quick Enhancements</span>
+          <span className="ui-helper font-bold uppercase tracking-wide">Quick Enhancements</span>
           <div className="flex flex-wrap gap-1.5" id="presets-quick-row">
             <button
               type="button"
               onClick={applyPresetAutoFix}
-              className="py-1.5 px-3 bg-white hover:bg-zinc-200 text-black font-bold rounded-lg text-xs transition cursor-pointer select-none"
+              className="ui-primary-button py-2 px-3 font-bold rounded-lg text-[13px] transition cursor-pointer select-none border"
               title="Enhance brightness, contrast and color automatically"
             >
               Auto fix
@@ -128,28 +128,28 @@ export default function AdjustmentsPanel({
             <button
               type="button"
               onClick={applyPresetBrighter}
-              className="py-1.5 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white font-semibold rounded-lg text-xs transition cursor-pointer select-none"
+              className="ui-secondary-button py-2 px-3 border font-semibold rounded-lg text-[13px] transition cursor-pointer select-none"
             >
               Brighter
             </button>
             <button
               type="button"
               onClick={applyPresetMoreColorful}
-              className="py-1.5 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white font-semibold rounded-lg text-xs transition cursor-pointer select-none"
+              className="ui-secondary-button py-2 px-3 border font-semibold rounded-lg text-[13px] transition cursor-pointer select-none"
             >
               More colorful
             </button>
             <button
               type="button"
               onClick={applyPresetBlackAndWhite}
-              className="py-1.5 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white font-semibold rounded-lg text-xs transition cursor-pointer select-none"
+              className="ui-secondary-button py-2 px-3 border font-semibold rounded-lg text-[13px] transition cursor-pointer select-none"
             >
               Black & white
             </button>
             <button
               type="button"
               onClick={applyPresetSharper}
-              className="py-1.5 px-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white font-semibold rounded-lg text-xs transition cursor-pointer select-none"
+              className="ui-secondary-button py-2 px-3 border font-semibold rounded-lg text-[13px] transition cursor-pointer select-none"
             >
               Sharper
             </button>
@@ -160,11 +160,11 @@ export default function AdjustmentsPanel({
         <div className="flex flex-col gap-3.5 mt-1" id="core-sliders">
           {/* Brightness */}
           <div className="flex flex-col gap-1.5" id="adjustment-row-brightness">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-zinc-350 flex items-center gap-1.5">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="font-semibold text-text-primary flex items-center gap-1.5">
                 <Sun className="w-3.5 h-3.5 text-zinc-400 shrink-0" /> Brightness — lighter/darker
               </span>
-              <span className="font-mono text-[10px] text-zinc-400">
+              <span className="font-mono text-xs text-text-secondary">
                 {adjustments.brightness > 0 ? `+${adjustments.brightness}` : adjustments.brightness}
               </span>
             </div>
@@ -183,11 +183,11 @@ export default function AdjustmentsPanel({
 
           {/* Contrast */}
           <div className="flex flex-col gap-1.5" id="adjustment-row-contrast">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-zinc-350 flex items-center gap-1.5">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="font-semibold text-text-primary flex items-center gap-1.5">
                 <Contrast className="w-3.5 h-3.5 text-zinc-400 shrink-0" /> Contrast — more/less punch
               </span>
-              <span className="font-mono text-[10px] text-zinc-400">
+              <span className="font-mono text-xs text-text-secondary">
                 {adjustments.contrast > 0 ? `+${adjustments.contrast}` : adjustments.contrast}
               </span>
             </div>
@@ -206,11 +206,11 @@ export default function AdjustmentsPanel({
 
           {/* Saturation / Color */}
           <div className="flex flex-col gap-1.5" id="adjustment-row-saturation">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-zinc-350 flex items-center gap-1.5">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="font-semibold text-text-primary flex items-center gap-1.5">
                 <Droplets className="w-3.5 h-3.5 text-zinc-400 shrink-0" /> Color — more/less color
               </span>
-              <span className="font-mono text-[10px] text-zinc-400">
+              <span className="font-mono text-xs text-text-secondary">
                 {adjustments.saturation > 0 ? `+${adjustments.saturation}` : adjustments.saturation}
               </span>
             </div>
@@ -326,7 +326,7 @@ export default function AdjustmentsPanel({
 
           {/* One-click Looks (Filters) */}
           <div className="flex flex-col gap-2 border-t border-zinc-900 pt-3" id="filters-grid-box">
-            <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wide">One-click looks</div>
+            <div className="ui-helper font-bold uppercase tracking-wide">One-click looks</div>
             <div className="grid grid-cols-2 gap-2" id="filter-cards-holder">
               {filtersList.map((f) => {
                 const isSelected = filter === f.id;
@@ -342,10 +342,10 @@ export default function AdjustmentsPanel({
                     }`}
                     id={`btn-filter-select-${f.id}`}
                   >
-                    <span className="text-xs font-semibold leading-tight">
+                    <span className="text-[13px] font-semibold leading-tight">
                       {f.label}
                     </span>
-                    <span className="text-[10px] text-zinc-500 mt-0.5 leading-tight">{f.desc}</span>
+                    <span className="text-xs text-text-secondary mt-1 leading-snug">{f.desc}</span>
                   </button>
                 );
               })}
@@ -357,7 +357,7 @@ export default function AdjustmentsPanel({
             <button
               type="button"
               onClick={onReset}
-              className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 py-1.5 px-3 rounded-lg border border-zinc-800 transition cursor-pointer select-none"
+              className="ui-secondary-button flex items-center gap-1.5 text-[13px] font-semibold py-2 px-3 rounded-lg border transition cursor-pointer select-none"
               id="btn-reset-adjustments"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Reset sliders to zero

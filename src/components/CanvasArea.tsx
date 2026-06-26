@@ -362,7 +362,7 @@ export default function CanvasArea({
       return;
     }
 
-    if ((activeTool === 'cloneStamp' || activeTool === 'healingBrush') && !isTouch && e.altKey) {
+    if ((activeTool === 'cloneStamp' || activeTool === 'healingBrush') && !isTouch && (e.altKey || e.shiftKey)) {
       onSetCloneSource(clickCoords);
       return;
     }
@@ -636,7 +636,7 @@ export default function CanvasArea({
             <span className="text-xs bg-zinc-900 text-white px-2.5 py-0.5 rounded-lg font-bold font-mono border border-zinc-800">
               {canvasWidth} × {canvasHeight} px
             </span>
-            <span className="text-[10px] text-zinc-400 capitalize hidden sm:inline-block">
+            <span className="text-xs text-text-secondary capitalize hidden sm:inline-block">
               Active Layer: {layers.find(l => l.id === activeLayerId)?.name || 'None'}
             </span>
           </div>
@@ -644,18 +644,18 @@ export default function CanvasArea({
           <div className="flex items-center gap-2" id="zoom-control-cluster">
             <button
               onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}
-              className="p-1 px-1.5 hover:bg-zinc-900 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1 text-xs font-semibold cursor-pointer"
+              className="p-1 px-1.5 hover:bg-zinc-900 rounded-lg text-text-secondary hover:text-text-primary transition flex items-center gap-1 text-xs font-semibold cursor-pointer"
               title="Zoom out of image"
               id="btn-zoom-out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-xs font-mono font-bold text-zinc-300 min-w-12 text-center" id="zoom-percentage-text">
+            <span className="text-xs font-mono font-bold text-text-primary min-w-12 text-center" id="zoom-percentage-text">
               {Math.round(zoom * 100)}%
             </span>
             <button
               onClick={() => setZoom(Math.min(4, zoom + 0.1))}
-              className="p-1 px-1.5 hover:bg-zinc-900 rounded-lg text-zinc-400 hover:text-white transition flex items-center gap-1 text-xs font-semibold cursor-pointer"
+              className="p-1 px-1.5 hover:bg-zinc-900 rounded-lg text-text-secondary hover:text-text-primary transition flex items-center gap-1 text-xs font-semibold cursor-pointer"
               title="Zoom in on image"
               id="btn-zoom-in"
             >
@@ -663,7 +663,7 @@ export default function CanvasArea({
             </button>
             <button
               onClick={resetPan}
-              className="p-1.5 hover:bg-zinc-900 rounded-lg text-zinc-400 hover:text-white transition cursor-pointer"
+              className="p-1.5 hover:bg-zinc-900 rounded-lg text-text-secondary hover:text-text-primary transition cursor-pointer"
               title="Recenter and Fit viewport"
               id="btn-recenter-canvas"
             >
@@ -698,7 +698,7 @@ export default function CanvasArea({
             <h3 className="text-xl font-extrabold text-white tracking-tight font-sans mb-2">
               Let's craft some magic!
             </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-sans mb-6">
+            <p className="ui-body font-sans mb-6">
               Drag and drop any picture here, search a local file, or experience one of our fun starter playgrounds:
             </p>
 
@@ -715,7 +715,7 @@ export default function CanvasArea({
 
             {/* Beginner Template Quick Try */}
             <div className="w-full flex flex-col gap-3" id="starter-samples-block">
-              <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider font-sans">
+              <span className="text-xs uppercase font-bold text-text-secondary tracking-wider font-sans">
                 Try a Starter Desk Project
               </span>
               <div className="grid grid-cols-3 gap-3" id="onboarding-starter-cards">

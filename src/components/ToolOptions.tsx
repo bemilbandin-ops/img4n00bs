@@ -158,19 +158,19 @@ export default function ToolOptions({
   ];
 
   return (
-    <div className="w-full flex flex-col gap-4 text-zinc-300" id="tool-options-container">
+    <div className="w-full flex flex-col gap-5 text-text-primary" id="tool-options-container">
       {/* 1. Educational card about active tool */}
-      <div className="bg-zinc-900/30 border border-zinc-900 p-3.5 rounded-xl flex flex-col gap-2 relative overflow-hidden" id="tool-info-card">
-        <div className="flex items-center gap-2 border-b border-zinc-900/80 pb-2">
-          <BookOpen className="w-4 h-4 text-zinc-400 shrink-0" />
-          <h3 className="text-sm font-semibold text-white tracking-tight">{help.title}</h3>
+      <div className="ui-card border p-4 rounded-xl flex flex-col gap-3 relative overflow-hidden" id="tool-info-card">
+        <div className="flex items-center gap-2 border-b border-panel-border pb-2.5">
+          <BookOpen className="w-4 h-4 text-text-secondary shrink-0" />
+          <h3 className="ui-section-title tracking-tight">{help.title}</h3>
         </div>
-        <p className="text-xs leading-relaxed text-zinc-400">{help.summary}</p>
+        <p className="ui-body">{help.summary}</p>
         
         {help.steps.length > 0 && (
-          <div className="flex flex-col gap-1.5 mt-1">
-            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider font-mono">How to use:</span>
-            <ol className="list-decimal pl-4 text-[11px] text-zinc-400 space-y-1">
+          <div className="flex flex-col gap-2 mt-1">
+            <span className="ui-helper uppercase font-bold tracking-wider font-mono">How to use:</span>
+            <ol className="list-decimal pl-4 text-[13px] text-text-primary leading-6 space-y-1">
               {help.steps.map((step, idx) => (
                 <li key={idx}>{step}</li>
               ))}
@@ -179,8 +179,8 @@ export default function ToolOptions({
         )}
 
         {help.mistake && (
-          <div className="mt-1 text-[10px] leading-relaxed text-zinc-500 bg-zinc-950/40 p-2 rounded-lg border border-zinc-900/50">
-            <span className="font-bold text-zinc-400">💡 Hint:</span> {help.mistake}
+          <div className="mt-1 ui-helper bg-black/30 p-3 rounded-lg border border-panel-border">
+            <span className="font-bold text-text-primary">Hint:</span> {help.mistake}
           </div>
         )}
       </div>
@@ -188,7 +188,7 @@ export default function ToolOptions({
       {/* 2. Basic controls section */}
       <div className="flex flex-col gap-3.5" id="tool-basic-controls">
         {activeTool === 'move' && (
-          <p className="text-xs leading-relaxed text-zinc-400 text-center py-2">
+          <p className="ui-body text-center py-2">
             No basic controls. Drag directly on the canvas to place.
           </p>
         )}
@@ -563,7 +563,7 @@ export default function ToolOptions({
                   </div>
                   <div>
                     <div className="font-bold text-[11px]">Crop to Selection</div>
-                    <div className="text-[9px] text-zinc-500">Trim canvas down to selected region</div>
+                    <div className="text-xs leading-snug text-text-secondary">Trim canvas down to selected region</div>
                   </div>
                 </button>
 
@@ -578,7 +578,7 @@ export default function ToolOptions({
                   </div>
                   <div>
                     <div className="font-bold text-[11px]">Fill Selection</div>
-                    <div className="text-[9px] text-zinc-500">Fill with current brush color</div>
+                    <div className="text-xs leading-snug text-text-secondary">Fill with current brush color</div>
                   </div>
                 </button>
 
@@ -593,7 +593,7 @@ export default function ToolOptions({
                   </div>
                   <div>
                     <div className="font-bold text-[11px]">Clear Inside</div>
-                    <div className="text-[9px] text-zinc-500">Erase pixels inside selection</div>
+                    <div className="text-xs leading-snug text-text-secondary">Erase pixels inside selection</div>
                   </div>
                 </button>
               </div>
@@ -792,7 +792,7 @@ export default function ToolOptions({
                 <Copy className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                 <div>
                   <div className="font-semibold text-xs text-white">Copy to New Layer</div>
-                  <div className="text-[10px] text-zinc-500">Duplicate selected pixels</div>
+                  <div className="text-xs leading-snug text-text-secondary">Duplicate selected pixels</div>
                 </div>
               </button>
 
@@ -805,7 +805,7 @@ export default function ToolOptions({
                 <Scissors className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                 <div>
                   <div className="font-semibold text-xs text-white">Cut to New Layer</div>
-                  <div className="text-[10px] text-zinc-500">Move selected pixels to new layer</div>
+                  <div className="text-xs leading-snug text-text-secondary">Move selected pixels to new layer</div>
                 </div>
               </button>
 
@@ -823,7 +823,7 @@ export default function ToolOptions({
                 <ClipboardPaste className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                 <div>
                   <div className="font-semibold text-xs text-white">Paste Clipboard Cutout</div>
-                  <div className="text-[10px] text-zinc-500">Paste copied pixels as a layer</div>
+                  <div className="text-xs leading-snug text-text-secondary">Paste copied pixels as a layer</div>
                 </div>
               </button>
 
@@ -836,7 +836,7 @@ export default function ToolOptions({
                 <Download className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                 <div>
                   <div className="font-semibold text-xs text-white">Download Area (PNG)</div>
-                  <div className="text-[10px] text-zinc-500">Save selection area as image file</div>
+                  <div className="text-xs leading-snug text-text-secondary">Save selection area as image file</div>
                 </div>
               </button>
 
