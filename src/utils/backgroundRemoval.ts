@@ -1,273 +1,71 @@
+import imglyRemoveBackground from '@imgly/background-removal';
+
 import { createCanvas } from './bitmapStore';
+
+export interface BackgroundRemovalOptions {
+  /** Simple fallback tolerance used if the model cannot run. */
+  threshold?: number;
+}
 
 type Rgb = [number, number, number];
 
-type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
+const canvasToBlob = (canvas: HTMLCanvasElement) => (
+  new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error('The browser could not encode the canvas.'));
+      }
+    }, 'image/png');
+  })
+);
 
-interface Cluster {
-  center: Rgb;
-  count: number;
-  sides: Set<EdgeSide>;
-  distances: number[];
-  tolerance: number;
-}
-
-export interface BackgroundRemovalOptions {
-  /** Base color tolerance for edge-connected background matching. */
-  threshold?: number;
-  /** Softens the generated alpha mask. */
-  featherRadius?: number;
-  /** Maximum edge color clusters treated as possible background. */
-  clusterCount?: number;
-}
-
-const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
-
-const colorDistance = (a: Rgb, b: Rgb) => {
-  const dr = a[0] - b[0];
-  const dg = a[1] - b[1];
-  const db = a[2] - b[2];
-  const lumaA = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2];
-  const lumaB = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
-  const dl = lumaA - lumaB;
-
-  return Math.sqrt(
-    dr * dr * 0.7 +
-    dg * dg * 1.0 +
-    db * db * 1.1 +
-    dl * dl * 0.6
-  );
+const colorDistance = (data: Uint8ClampedArray, offset: number, color: Rgb) => {
+  const dr = data[offset] - color[0];
+  const dg = data[offset + 1] - color[1];
+  const db = data[offset + 2] - color[2];
+  return Math.sqrt(dr * dr + dg * dg + db * db);
 };
 
-const pixelAt = (data: Uint8ClampedArray, offset: number): Rgb => [
-  data[offset],
-  data[offset + 1],
-  data[offset + 2]
-];
-
-const sampleEdgePixels = (image: ImageData) => {
+const sampleEdgeColor = (image: ImageData): Rgb => {
   const { width, height, data } = image;
-  const samples: Array<{ color: Rgb; side: EdgeSide }> = [];
-  const step = Math.max(1, Math.floor(Math.min(width, height) / 220));
+  const totals = [0, 0, 0];
+  let count = 0;
 
-  const add = (x: number, y: number, side: EdgeSide) => {
+  const add = (x: number, y: number) => {
     const offset = (y * width + x) * 4;
     if (data[offset + 3] < 12) return;
-    samples.push({ color: pixelAt(data, offset), side });
+    totals[0] += data[offset];
+    totals[1] += data[offset + 1];
+    totals[2] += data[offset + 2];
+    count++;
   };
 
-  for (let x = 0; x < width; x += step) {
-    add(x, 0, 'top');
-    if (height > 1) add(x, height - 1, 'bottom');
+  for (let x = 0; x < width; x++) {
+    add(x, 0);
+    if (height > 1) add(x, height - 1);
   }
-  for (let y = step; y < height - step; y += step) {
-    add(0, y, 'left');
-    if (width > 1) add(width - 1, y, 'right');
-  }
-
-  return samples;
-};
-
-const nearestClusterIndex = (color: Rgb, centers: Rgb[]) => {
-  let bestIndex = 0;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  centers.forEach((center, index) => {
-    const distance = colorDistance(color, center);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = index;
-    }
-  });
-
-  return bestIndex;
-};
-
-const buildEdgeClusters = (
-  samples: Array<{ color: Rgb; side: EdgeSide }>,
-  clusterCount: number,
-  baseTolerance: number
-) => {
-  if (samples.length === 0) return [];
-
-  const sorted = [...samples].sort((a, b) => (
-    a.color[0] + a.color[1] + a.color[2]
-  ) - (
-    b.color[0] + b.color[1] + b.color[2]
-  ));
-  const count = Math.min(clusterCount, sorted.length);
-  let centers: Rgb[] = Array.from({ length: count }, (_, index) => {
-    const sampleIndex = Math.round((index / Math.max(1, count - 1)) * (sorted.length - 1));
-    return [...sorted[sampleIndex].color] as Rgb;
-  });
-
-  for (let iteration = 0; iteration < 8; iteration++) {
-    const totals = centers.map(() => [0, 0, 0, 0]);
-
-    for (const sample of samples) {
-      const index = nearestClusterIndex(sample.color, centers);
-      totals[index][0] += sample.color[0];
-      totals[index][1] += sample.color[1];
-      totals[index][2] += sample.color[2];
-      totals[index][3] += 1;
-    }
-
-    centers = centers.map((center, index) => {
-      const total = totals[index];
-      if (total[3] === 0) return center;
-      return [
-        clampByte(total[0] / total[3]),
-        clampByte(total[1] / total[3]),
-        clampByte(total[2] / total[3])
-      ];
-    });
-  }
-
-  const clusters: Cluster[] = centers.map(center => ({
-    center,
-    count: 0,
-    sides: new Set<EdgeSide>(),
-    distances: [],
-    tolerance: baseTolerance
-  }));
-
-  for (const sample of samples) {
-    const index = nearestClusterIndex(sample.color, centers);
-    const cluster = clusters[index];
-    cluster.count += 1;
-    cluster.sides.add(sample.side);
-    cluster.distances.push(colorDistance(sample.color, cluster.center));
-  }
-
-  const minimumEdgeShare = Math.max(8, samples.length * 0.035);
-  return clusters
-    .filter(cluster => cluster.count >= minimumEdgeShare || cluster.sides.size >= 3)
-    .map(cluster => {
-      const mean = cluster.distances.reduce((sum, value) => sum + value, 0) / Math.max(1, cluster.distances.length);
-      const variance = cluster.distances.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(1, cluster.distances.length);
-      cluster.tolerance = Math.max(baseTolerance, Math.min(96, mean + Math.sqrt(variance) * 2.4 + 18));
-      return cluster;
-    })
-    .sort((a, b) => b.count - a.count);
-};
-
-const findMatchingCluster = (color: Rgb, clusters: Cluster[]) => {
-  let best: Cluster | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const cluster of clusters) {
-    const distance = colorDistance(color, cluster.center);
-    if (distance <= cluster.tolerance && distance < bestDistance) {
-      best = cluster;
-      bestDistance = distance;
-    }
-  }
-
-  return best;
-};
-
-const blurAlpha = (alpha: Uint8ClampedArray, width: number, height: number, radius: number) => {
-  if (radius <= 0) return alpha;
-  const next = new Uint8ClampedArray(alpha);
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let total = 0;
-      let count = 0;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const px = x + dx;
-          const py = y + dy;
-          if (px < 0 || py < 0 || px >= width || py >= height) continue;
-          total += alpha[py * width + px];
-          count++;
-        }
-      }
-      next[y * width + x] = Math.round(total / count);
-    }
-  }
-
-  return next;
-};
-
-const softenBackgroundEdge = (alpha: Uint8ClampedArray, width: number, height: number) => {
-  const next = new Uint8ClampedArray(alpha);
-
   for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const index = y * width + x;
-      if (alpha[index] !== 255) continue;
-
-      const touchesRemoved =
-        alpha[index - 1] === 0 ||
-        alpha[index + 1] === 0 ||
-        alpha[index - width] === 0 ||
-        alpha[index + width] === 0;
-
-      if (touchesRemoved) {
-        next[index] = 210;
-      }
-    }
+    add(0, y);
+    if (width > 1) add(width - 1, y);
   }
 
-  return next;
+  return totals.map(value => Math.round(value / Math.max(1, count))) as Rgb;
 };
 
-const fillTinyForegroundIslands = (alpha: Uint8ClampedArray, width: number, height: number) => {
-  const visited = new Uint8Array(width * height);
-  const queue: number[] = [];
-  const maxIslandArea = Math.max(16, Math.round(width * height * 0.00035));
-
-  for (let start = 0; start < alpha.length; start++) {
-    if (visited[start] || alpha[start] < 255) continue;
-
-    queue.length = 0;
-    const component: number[] = [];
-    visited[start] = 1;
-    queue.push(start);
-    let touchesEdge = false;
-
-    for (let cursor = 0; cursor < queue.length; cursor++) {
-      const index = queue[cursor];
-      component.push(index);
-      const x = index % width;
-      const y = Math.floor(index / width);
-      touchesEdge ||= x === 0 || y === 0 || x === width - 1 || y === height - 1;
-
-      const neighbors = [index - 1, index + 1, index - width, index + width];
-      for (const next of neighbors) {
-        if (next < 0 || next >= alpha.length || visited[next] || alpha[next] < 255) continue;
-        const nx = next % width;
-        const ny = Math.floor(next / width);
-        if (Math.abs(nx - x) + Math.abs(ny - y) !== 1) continue;
-        visited[next] = 1;
-        queue.push(next);
-      }
-    }
-
-    if (!touchesEdge && component.length <= maxIslandArea) {
-      for (const index of component) {
-        alpha[index] = 0;
-      }
-    }
-  }
-
-  return alpha;
-};
-
-export function createBackgroundRemovalMask(
+const createFallbackMask = (
   source: HTMLCanvasElement,
-  { threshold = 42, featherRadius = 1, clusterCount = 7 }: BackgroundRemovalOptions = {}
-) {
+  { threshold = 42 }: BackgroundRemovalOptions = {}
+) => {
   const mask = createCanvas(source.width, source.height);
   const sourceCtx = source.getContext('2d');
   const maskCtx = mask.getContext('2d');
   if (!sourceCtx || !maskCtx || source.width === 0 || source.height === 0) return mask;
 
   const image = sourceCtx.getImageData(0, 0, source.width, source.height);
+  const background = sampleEdgeColor(image);
   const { width, height, data } = image;
-  const edgeSamples = sampleEdgePixels(image);
-  const clusters = buildEdgeClusters(edgeSamples, clusterCount, threshold);
   const removed = new Uint8Array(width * height);
   const queue: number[] = [];
 
@@ -275,14 +73,7 @@ export function createBackgroundRemovalMask(
     const index = y * width + x;
     if (removed[index]) return;
     const offset = index * 4;
-
-    if (data[offset + 3] < 12) {
-      removed[index] = 1;
-      queue.push(index);
-      return;
-    }
-
-    if (findMatchingCluster(pixelAt(data, offset), clusters)) {
+    if (data[offset + 3] < 12 || colorDistance(data, offset, background) <= threshold) {
       removed[index] = 1;
       queue.push(index);
     }
@@ -307,23 +98,119 @@ export function createBackgroundRemovalMask(
     if (y < height - 1) enqueue(x, y + 1);
   }
 
-  let alpha = new Uint8ClampedArray(width * height);
-  for (let i = 0; i < alpha.length; i++) {
-    alpha[i] = removed[i] ? 0 : 255;
-  }
-
-  alpha = fillTinyForegroundIslands(alpha, width, height);
-  alpha = softenBackgroundEdge(alpha, width, height);
-  alpha = blurAlpha(alpha, width, height, Math.max(0, Math.round(featherRadius)));
-
   const maskImage = new ImageData(width, height);
-  for (let i = 0; i < alpha.length; i++) {
+  for (let i = 0; i < removed.length; i++) {
     const offset = i * 4;
     maskImage.data[offset] = 255;
     maskImage.data[offset + 1] = 255;
     maskImage.data[offset + 2] = 255;
-    maskImage.data[offset + 3] = alpha[i];
+    maskImage.data[offset + 3] = removed[i] ? 0 : 255;
   }
   maskCtx.putImageData(maskImage, 0, 0);
+  return mask;
+};
+
+const setApplyButtonState = (label: string, disabled: boolean) => {
+  const applyButton = document.getElementById('btn-apply-remove-background') as HTMLButtonElement | null;
+  if (!applyButton) return;
+
+  applyButton.disabled = disabled;
+  applyButton.textContent = label;
+  applyButton.classList.toggle('opacity-50', disabled);
+  applyButton.classList.toggle('cursor-wait', disabled);
+};
+
+const refreshPreviewImage = (source: HTMLCanvasElement, mask: HTMLCanvasElement) => {
+  const preview = createCanvas(source.width, source.height);
+  const previewCtx = preview.getContext('2d');
+  if (!previewCtx) return;
+
+  previewCtx.drawImage(source, 0, 0);
+  previewCtx.globalCompositeOperation = 'destination-in';
+  previewCtx.drawImage(mask, 0, 0, preview.width, preview.height);
+  previewCtx.globalCompositeOperation = 'source-over';
+
+  const previewImage = document.querySelector<HTMLImageElement>('#remove-background-preview img');
+  if (previewImage) {
+    previewImage.src = preview.toDataURL('image/png');
+  }
+};
+
+const copyCanvas = (source: HTMLCanvasElement, target: HTMLCanvasElement) => {
+  const ctx = target.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, target.width, target.height);
+  ctx.drawImage(source, 0, 0, target.width, target.height);
+};
+
+const createMaskFromCutout = async (
+  cutoutBlob: Blob,
+  width: number,
+  height: number
+) => {
+  const cutout = await createImageBitmap(cutoutBlob);
+  const cutoutCanvas = createCanvas(width, height);
+  const cutoutCtx = cutoutCanvas.getContext('2d');
+  const mask = createCanvas(width, height);
+  const maskCtx = mask.getContext('2d');
+
+  if (!cutoutCtx || !maskCtx) return mask;
+
+  cutoutCtx.drawImage(cutout, 0, 0, width, height);
+  cutout.close();
+
+  const cutoutPixels = cutoutCtx.getImageData(0, 0, width, height);
+  const maskImage = new ImageData(width, height);
+
+  for (let i = 0; i < cutoutPixels.data.length; i += 4) {
+    maskImage.data[i] = 255;
+    maskImage.data[i + 1] = 255;
+    maskImage.data[i + 2] = 255;
+    maskImage.data[i + 3] = cutoutPixels.data[i + 3];
+  }
+
+  maskCtx.putImageData(maskImage, 0, 0);
+  return mask;
+};
+
+const upgradeMaskWithImgly = async (source: HTMLCanvasElement, liveMask: HTMLCanvasElement) => {
+  const inputBlob = await canvasToBlob(source);
+  const cutoutBlob = await imglyRemoveBackground(inputBlob, {
+    model: 'isnet_fp16',
+    output: {
+      format: 'image/png',
+      quality: 0.95,
+      type: 'foreground'
+    }
+  });
+  const modelMask = await createMaskFromCutout(cutoutBlob, source.width, source.height);
+  copyCanvas(modelMask, liveMask);
+  refreshPreviewImage(source, liveMask);
+};
+
+/**
+ * Returns a mask immediately so the existing synchronous editor flow keeps working.
+ * The IMG.LY model upgrades that same mask canvas asynchronously, then refreshes the preview modal.
+ */
+export function createBackgroundRemovalMask(
+  source: HTMLCanvasElement,
+  options: BackgroundRemovalOptions = {}
+) {
+  const mask = createFallbackMask(source, options);
+
+  window.requestAnimationFrame(() => {
+    setApplyButtonState('Removing...', true);
+  });
+
+  void upgradeMaskWithImgly(source, mask)
+    .then(() => {
+      setApplyButtonState('Apply Mask', false);
+    })
+    .catch(error => {
+      console.error('IMG.LY background removal failed. Using fallback mask.', error);
+      refreshPreviewImage(source, mask);
+      setApplyButtonState('Apply Fallback Mask', false);
+    });
+
   return mask;
 }
