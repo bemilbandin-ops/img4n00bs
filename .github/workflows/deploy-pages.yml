@@ -2,7 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - gpt-n00bz
   workflow_dispatch:
 
 permissions:
@@ -37,6 +39,9 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: 'true'
+
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
