@@ -8,7 +8,7 @@ const workflowIds = new Set(workflows.map(workflow => workflow.id));
 
 describe('beginner guidance data', () => {
   it('defines the expected goal-first workflows', () => {
-    expect(workflowIds).toEqual(expect.arrayContaining([
+    expect(Array.from(workflowIds)).toEqual(expect.arrayContaining([
       'fix-photo',
       'remove-background',
       'cut-out',
