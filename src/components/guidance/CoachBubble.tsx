@@ -1,3 +1,4 @@
+import { type CSSProperties } from 'react';
 import { type Workflow, type WorkflowStep } from '../../data/workflows';
 import { type ElementTargetRect } from '../../utils/elementTargets';
 
@@ -14,11 +15,13 @@ interface CoachBubbleProps {
 
 export default function CoachBubble({ workflow, step, stepIndex, rect, onBack, onNext, onSkip, onShowMe }: CoachBubbleProps) {
   const isLast = stepIndex === workflow.steps.length - 1;
-  const style = {
+  const style: CSSProperties = {
     top: rect ? Math.min(window.innerHeight - 220, Math.max(16, rect.bottom + 18)) : 96,
     left: rect ? Math.min(window.innerWidth - 380, Math.max(16, rect.left)) : 24,
     width: 360,
-    maxWidth: 'calc(100vw - 32px)'
+    maxWidth: 'calc(100vw - 32px)',
+    pointerEvents: 'auto',
+    zIndex: 60
   };
 
   return (
