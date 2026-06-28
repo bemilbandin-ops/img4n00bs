@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Mask demo">
+  <rect width="320" height="180" rx="24" fill="#09090b"/>
+  <rect x="52" y="34" width="216" height="112" rx="14" fill="#18181b" stroke="#3f3f46"/>
+  <rect x="64" y="46" width="24" height="24" fill="#27272a"/>
+  <rect x="88" y="70" width="24" height="24" fill="#27272a"/>
+  <rect x="112" y="46" width="24" height="24" fill="#27272a"/>
+  <circle cx="142" cy="90" r="42" fill="#e4e4e7"/>
+  <path d="M184 54c30 18 38 48 18 74" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 7"/>
+</svg>
