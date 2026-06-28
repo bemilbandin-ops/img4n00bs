@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Text demo">
+  <rect width="320" height="180" rx="24" fill="#09090b"/>
+  <rect x="42" y="38" width="236" height="104" rx="14" fill="#18181b" stroke="#3f3f46"/>
+  <text x="80" y="92" fill="#fff" font-family="Arial, sans-serif" font-size="34" font-weight="700">Add Text</text>
+  <rect x="74" y="58" width="172" height="48" rx="6" fill="none" stroke="#a1a1aa" stroke-dasharray="8 6"/>
+  <circle cx="246" cy="82" r="6" fill="#fff"/>
+  <path d="M92 118h136" stroke="#71717a" stroke-width="7" stroke-linecap="round"/>
+</svg>
