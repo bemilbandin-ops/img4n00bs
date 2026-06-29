@@ -58,3 +58,5 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+# Touch this file to retrigger Pages after changing repository Pages source.
