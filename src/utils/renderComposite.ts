@@ -9,7 +9,8 @@ import {
   applyLayerTransform,
   getDefaultLayerTransform,
   isDefaultLayerTransform,
-  getLayerContentCenter
+  getLayerContentCenter,
+  getBitmapRenderTransform
 } from './layerTransforms';
 
 export function getDefaultTransform(): LayerTransform {
@@ -136,7 +137,7 @@ export function renderComposite({
     const effectsCanvas = createLayerEffectsCanvas(layer, maskedCanvas);
 
     const center = getLayerContentCenter(layer, width, height);
-    drawTransformedLayer(ctx, effectsCanvas, layer.transform, center);
+    drawTransformedLayer(ctx, effectsCanvas, getBitmapRenderTransform(layer), center);
 
     ctx.restore();
   });
