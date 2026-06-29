@@ -205,6 +205,26 @@ export function remapPointBetweenCanvasCenters(
   };
 }
 
+export function getBitmapRenderTransform(layer: EditorLayer): LayerTransform {
+  const transform = layer.transform;
+  if (layer.type !== 'image' && layer.type !== 'drawing') {
+    return transform;
+  }
+
+  const bakedX = transform.bakedCropOffsetX ?? 0;
+  const bakedY = transform.bakedCropOffsetY ?? 0;
+
+  if (bakedX === 0 && bakedY === 0) {
+    return transform;
+  }
+
+  return {
+    ...transform,
+    x: transform.x - bakedX,
+    y: transform.y - bakedY
+  };
+}
+
 export function cropLayerTransform(
   transform: LayerTransform,
   oldSize: LayerSize,
@@ -213,11 +233,15 @@ export function cropLayerTransform(
 ): LayerTransform {
   const oldCenter = getCanvasCenter(oldSize);
   const newCenter = getCanvasCenter(newSize);
+  const deltaX = oldCenter.x - cropOrigin.x - newCenter.x;
+  const deltaY = oldCenter.y - cropOrigin.y - newCenter.y;
 
   return {
     ...transform,
-    x: transform.x + oldCenter.x - cropOrigin.x - newCenter.x,
-    y: transform.y + oldCenter.y - cropOrigin.y - newCenter.y
+    x: transform.x + deltaX,
+    y: transform.y + deltaY,
+    bakedCropOffsetX: (transform.bakedCropOffsetX ?? 0) + deltaX,
+    bakedCropOffsetY: (transform.bakedCropOffsetY ?? 0) + deltaY
   };
 }
 
@@ -242,7 +266,9 @@ export function rotateLayerTransform90(transform: LayerTransform): LayerTransfor
     ...transform,
     x: -transform.y,
     y: transform.x,
-    rotation: transform.rotation + 90
+    rotation: transform.rotation + 90,
+    bakedCropOffsetX: -(transform.bakedCropOffsetY ?? 0),
+    bakedCropOffsetY: transform.bakedCropOffsetX ?? 0
   };
 }
 
@@ -251,7 +277,8 @@ export function flipLayerTransformHorizontally(transform: LayerTransform): Layer
     ...transform,
     x: -transform.x,
     rotation: -transform.rotation,
-    scaleX: -transform.scaleX
+    scaleX: -transform.scaleX,
+    bakedCropOffsetX: -(transform.bakedCropOffsetX ?? 0)
   };
 }
 
@@ -260,6 +287,7 @@ export function flipLayerTransformVertically(transform: LayerTransform): LayerTr
     ...transform,
     y: -transform.y,
     rotation: -transform.rotation,
-    scaleY: -transform.scaleY
+    scaleY: -transform.scaleY,
+    bakedCropOffsetY: -(transform.bakedCropOffsetY ?? 0)
   };
 }
