@@ -75,6 +75,10 @@ export interface LayerTransform {
   scaleX: number;
   scaleY: number;
   rotation: number;
+  /** Translation already baked into bitmap pixels during crop. */
+  bakedCropOffsetX?: number;
+  /** Translation already baked into bitmap pixels during crop. */
+  bakedCropOffsetY?: number;
 }
 
 export interface LayerMask {
